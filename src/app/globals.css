@@ -1,4 +1,12 @@
-@import "tailwindcss";
+/* source(none) + @source explícito: sin esto, la auto-detección de Tailwind v4
+   sube hasta la raíz del repo (este visor vive dentro de RL_SAC) y escanea los
+   binarios del proyecto de ML — pesos .h5, .pkl, parquet. De ahí saca bytes que
+   parecen clases y genera CSS inválido ("Parsing CSS source code failed" con
+   nombres tipo .data-\[m\4 x\1 o\]). Acotarlo a src/ lo elimina de raíz. */
+@import "tailwindcss" source(none);
+@source "../";          /* = src/ — SOLO el código de la app. Ojo: este archivo
+                           vive en src/app/, así que "../" es src/ y "../../"
+                           sería todo tradingview-clon (node_modules incluido). */
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 

@@ -1,0 +1,3012 @@
+{
+  "simbolo": "BTCUSDT",
+  "split": "val",
+  "checkpoint": "checkpoints/mejor",
+  "senales": [
+    {
+      "tiempoMs": 1741192200000,
+      "evento": "abrir_short",
+      "precio": 87874.4216
+    },
+    {
+      "tiempoMs": 1741193700000,
+      "evento": "cerrar_short",
+      "precio": 89210.37643158478,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4162
+    },
+    {
+      "tiempoMs": 1741194000000,
+      "evento": "abrir_short",
+      "precio": 88860.2244
+    },
+    {
+      "tiempoMs": 1741195800000,
+      "evento": "cerrar_short",
+      "precio": 90211.1663915532,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3157
+    },
+    {
+      "tiempoMs": 1741196100000,
+      "evento": "abrir_short",
+      "precio": 90344.8258578125
+    },
+    {
+      "tiempoMs": 1741225500000,
+      "evento": "cerrar_short",
+      "precio": 91718.3382453288,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3093
+    },
+    {
+      "tiempoMs": 1741225800000,
+      "evento": "abrir_short",
+      "precio": 91786.7405421875
+    },
+    {
+      "tiempoMs": 1741280400000,
+      "evento": "cerrar_short",
+      "precio": 89033.13832592187,
+      "motivo": "take_profit",
+      "pnlUsd": 2.3495
+    },
+    {
+      "tiempoMs": 1741280700000,
+      "evento": "abrir_short",
+      "precio": 88519.2926
+    },
+    {
+      "tiempoMs": 1741298100000,
+      "evento": "cerrar_short",
+      "precio": 89865.0514053978,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3436
+    },
+    {
+      "tiempoMs": 1741298400000,
+      "evento": "abrir_short",
+      "precio": 89854.62704218751
+    },
+    {
+      "tiempoMs": 1741306200000,
+      "evento": "cerrar_short",
+      "precio": 91220.68693710987,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.475
+    },
+    {
+      "tiempoMs": 1741306500000,
+      "evento": "abrir_short",
+      "precio": 90147.170084375
+    },
+    {
+      "tiempoMs": 1741306800000,
+      "evento": "cerrar_short",
+      "precio": 87442.75498184375,
+      "motivo": "take_profit",
+      "pnlUsd": 2.5578
+    },
+    {
+      "tiempoMs": 1741307100000,
+      "evento": "abrir_short",
+      "precio": 87310.03450000001
+    },
+    {
+      "tiempoMs": 1741308900000,
+      "evento": "cerrar_short",
+      "precio": 84690.73346500001,
+      "motivo": "take_profit",
+      "pnlUsd": 2.5301
+    },
+    {
+      "tiempoMs": 1741309200000,
+      "evento": "abrir_short",
+      "precio": 85460.701315625
+    },
+    {
+      "tiempoMs": 1741310100000,
+      "evento": "cerrar_short",
+      "precio": 86759.96035772644,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4264
+    },
+    {
+      "tiempoMs": 1741310400000,
+      "evento": "abrir_short",
+      "precio": 87162.564
+    },
+    {
+      "tiempoMs": 1741311600000,
+      "evento": "cerrar_short",
+      "precio": 88487.69646049199,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4616
+    },
+    {
+      "tiempoMs": 1741311900000,
+      "evento": "abrir_short",
+      "precio": 88662.1624578125
+    },
+    {
+      "tiempoMs": 1741354200000,
+      "evento": "cerrar_short",
+      "precio": 90010.09331365862,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3734
+    },
+    {
+      "tiempoMs": 1741354500000,
+      "evento": "abrir_short",
+      "precio": 89724.848315625
+    },
+    {
+      "tiempoMs": 1741359000000,
+      "evento": "cerrar_short",
+      "precio": 91088.93518456744,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1613
+    },
+    {
+      "tiempoMs": 1741359300000,
+      "evento": "abrir_short",
+      "precio": 90817.4344421875
+    },
+    {
+      "tiempoMs": 1741361700000,
+      "evento": "cerrar_short",
+      "precio": 88092.91140892188,
+      "motivo": "take_profit",
+      "pnlUsd": 2.0848
+    },
+    {
+      "tiempoMs": 1741362000000,
+      "evento": "abrir_short",
+      "precio": 88217.353
+    },
+    {
+      "tiempoMs": 1741381500000,
+      "evento": "cerrar_short",
+      "precio": 85570.83241,
+      "motivo": "take_profit",
+      "pnlUsd": 2.3049
+    },
+    {
+      "tiempoMs": 1741381800000,
+      "evento": "abrir_short",
+      "precio": 86232.546915625
+    },
+    {
+      "tiempoMs": 1741528500000,
+      "evento": "cerrar_short",
+      "precio": 83645.57050815625,
+      "motivo": "take_profit",
+      "pnlUsd": 2.5322
+    },
+    {
+      "tiempoMs": 1741528800000,
+      "evento": "abrir_short",
+      "precio": 83411.111315625
+    },
+    {
+      "tiempoMs": 1741559400000,
+      "evento": "cerrar_short",
+      "precio": 80908.77797615626,
+      "motivo": "take_profit",
+      "pnlUsd": 2.7441
+    },
+    {
+      "tiempoMs": 1741559700000,
+      "evento": "abrir_short",
+      "precio": 81126.8729421875
+    },
+    {
+      "tiempoMs": 1741572900000,
+      "evento": "cerrar_short",
+      "precio": 82360.24479152757,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.8621
+    },
+    {
+      "tiempoMs": 1741573200000,
+      "evento": "abrir_short",
+      "precio": 82209.15644218751
+    },
+    {
+      "tiempoMs": 1741598400000,
+      "evento": "cerrar_short",
+      "precio": 83458.98224757808,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6827
+    },
+    {
+      "tiempoMs": 1741598700000,
+      "evento": "abrir_short",
+      "precio": 83608.3765421875
+    },
+    {
+      "tiempoMs": 1741615200000,
+      "evento": "cerrar_short",
+      "precio": 81100.12524592187,
+      "motivo": "take_profit",
+      "pnlUsd": 2.7785
+    },
+    {
+      "tiempoMs": 1741615500000,
+      "evento": "abrir_short",
+      "precio": 80707.8552
+    },
+    {
+      "tiempoMs": 1741629300000,
+      "evento": "cerrar_short",
+      "precio": 78286.619544,
+      "motivo": "take_profit",
+      "pnlUsd": 2.7463
+    },
+    {
+      "tiempoMs": 1741629600000,
+      "evento": "abrir_short",
+      "precio": 78404.8159
+    },
+    {
+      "tiempoMs": 1741640100000,
+      "evento": "cerrar_short",
+      "precio": 79596.8043161277,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.5501
+    },
+    {
+      "tiempoMs": 1741640400000,
+      "evento": "abrir_short",
+      "precio": 79254.442815625
+    },
+    {
+      "tiempoMs": 1741653300000,
+      "evento": "cerrar_short",
+      "precio": 76876.80953115625,
+      "motivo": "take_profit",
+      "pnlUsd": 2.9727
+    },
+    {
+      "tiempoMs": 1741653600000,
+      "evento": "abrir_short",
+      "precio": 76881.1207
+    },
+    {
+      "tiempoMs": 1741656600000,
+      "evento": "cerrar_short",
+      "precio": 78049.94437800208,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6274
+    },
+    {
+      "tiempoMs": 1741656900000,
+      "evento": "abrir_short",
+      "precio": 78124.668815625
+    },
+    {
+      "tiempoMs": 1741658400000,
+      "evento": "cerrar_short",
+      "precio": 79312.39815562894,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.5686
+    },
+    {
+      "tiempoMs": 1741658700000,
+      "evento": "abrir_short",
+      "precio": 78986.0980578125
+    },
+    {
+      "tiempoMs": 1741666800000,
+      "evento": "cerrar_short",
+      "precio": 80186.92370658541,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4654
+    },
+    {
+      "tiempoMs": 1741667100000,
+      "evento": "abrir_short",
+      "precio": 79815.6352421875
+    },
+    {
+      "tiempoMs": 1741682700000,
+      "evento": "cerrar_short",
+      "precio": 81029.07234477447,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.5065
+    },
+    {
+      "tiempoMs": 1741683000000,
+      "evento": "abrir_short",
+      "precio": 81285.036615625
+    },
+    {
+      "tiempoMs": 1741717200000,
+      "evento": "cerrar_short",
+      "precio": 82520.81302729233,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.5049
+    },
+    {
+      "tiempoMs": 1741717500000,
+      "evento": "abrir_short",
+      "precio": 82557.5867421875
+    },
+    {
+      "tiempoMs": 1741782600000,
+      "evento": "cerrar_short",
+      "precio": 83812.70973342896,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.353
+    },
+    {
+      "tiempoMs": 1741782900000,
+      "evento": "abrir_short",
+      "precio": 83874.018715625
+    },
+    {
+      "tiempoMs": 1741791600000,
+      "evento": "cerrar_short",
+      "precio": 81357.79815415625,
+      "motivo": "take_profit",
+      "pnlUsd": 2.3041
+    },
+    {
+      "tiempoMs": 1741791900000,
+      "evento": "abrir_short",
+      "precio": 81053.78600000001
+    },
+    {
+      "tiempoMs": 1741799100000,
+      "evento": "cerrar_short",
+      "precio": 82286.04670855799,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4173
+    },
+    {
+      "tiempoMs": 1741799400000,
+      "evento": "abrir_short",
+      "precio": 82353.6275421875
+    },
+    {
+      "tiempoMs": 1741818900000,
+      "evento": "cerrar_short",
+      "precio": 83605.64974171137,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4782
+    },
+    {
+      "tiempoMs": 1741819200000,
+      "evento": "abrir_short",
+      "precio": 83584.1782578125
+    },
+    {
+      "tiempoMs": 1741880100000,
+      "evento": "cerrar_short",
+      "precio": 81076.65291007812,
+      "motivo": "take_profit",
+      "pnlUsd": 3.018
+    },
+    {
+      "tiempoMs": 1741880400000,
+      "evento": "abrir_short",
+      "precio": 81039.491984375
+    },
+    {
+      "tiempoMs": 1741938000000,
+      "evento": "cerrar_short",
+      "precio": 82271.53538101344,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3409
+    },
+    {
+      "tiempoMs": 1741938300000,
+      "evento": "abrir_short",
+      "precio": 82322.4306578125
+    },
+    {
+      "tiempoMs": 1741959000000,
+      "evento": "cerrar_short",
+      "precio": 83573.9785711032,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3179
+    },
+    {
+      "tiempoMs": 1741959300000,
+      "evento": "abrir_short",
+      "precio": 83619.2728
+    },
+    {
+      "tiempoMs": 1741965600000,
+      "evento": "cerrar_short",
+      "precio": 84890.5366043784,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.167
+    },
+    {
+      "tiempoMs": 1741965900000,
+      "evento": "abrir_short",
+      "precio": 84732.0502
+    },
+    {
+      "tiempoMs": 1742162700000,
+      "evento": "cerrar_short",
+      "precio": 82190.08869399999,
+      "motivo": "take_profit",
+      "pnlUsd": 2.0647
+    },
+    {
+      "tiempoMs": 1742163000000,
+      "evento": "abrir_short",
+      "precio": 82349.6283421875
+    },
+    {
+      "tiempoMs": 1742180700000,
+      "evento": "cerrar_short",
+      "precio": 83601.58974187376,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6677
+    },
+    {
+      "tiempoMs": 1742181000000,
+      "evento": "abrir_short",
+      "precio": 83405.112515625
+    },
+    {
+      "tiempoMs": 1742240700000,
+      "evento": "cerrar_short",
+      "precio": 84673.12044120005,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6425
+    },
+    {
+      "tiempoMs": 1742241000000,
+      "evento": "abrir_short",
+      "precio": 84583.1815421875
+    },
+    {
+      "tiempoMs": 1742304900000,
+      "evento": "cerrar_short",
+      "precio": 82045.68609592188,
+      "motivo": "take_profit",
+      "pnlUsd": 2.8594
+    },
+    {
+      "tiempoMs": 1742305200000,
+      "evento": "abrir_short",
+      "precio": 81627.7727421875
+    },
+    {
+      "tiempoMs": 1742343900000,
+      "evento": "cerrar_short",
+      "precio": 82868.75977118696,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3734
+    },
+    {
+      "tiempoMs": 1742344200000,
+      "evento": "abrir_short",
+      "precio": 82863.5255421875
+    },
+    {
+      "tiempoMs": 1742390100000,
+      "evento": "cerrar_short",
+      "precio": 84123.29972100537,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.8029
+    },
+    {
+      "tiempoMs": 1742390400000,
+      "evento": "abrir_short",
+      "precio": 84236.2509421875
+    },
+    {
+      "tiempoMs": 1742410500000,
+      "evento": "cerrar_short",
+      "precio": 85516.89466526157,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1362
+    },
+    {
+      "tiempoMs": 1742410800000,
+      "evento": "abrir_short",
+      "precio": 85558.9863421875
+    },
+    {
+      "tiempoMs": 1742427000000,
+      "evento": "cerrar_short",
+      "precio": 86859.73961154777,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3052
+    },
+    {
+      "tiempoMs": 1742427300000,
+      "evento": "abrir_short",
+      "precio": 86704.1557
+    },
+    {
+      "tiempoMs": 1742487900000,
+      "evento": "cerrar_short",
+      "precio": 84103.031029,
+      "motivo": "take_profit",
+      "pnlUsd": 2.6424
+    },
+    {
+      "tiempoMs": 1742488200000,
+      "evento": "abrir_short",
+      "precio": 84019.989515625
+    },
+    {
+      "tiempoMs": 1742746200000,
+      "evento": "cerrar_short",
+      "precio": 85297.34541623104,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1579
+    },
+    {
+      "tiempoMs": 1742746500000,
+      "evento": "abrir_short",
+      "precio": 85254.0473421875
+    },
+    {
+      "tiempoMs": 1742776200000,
+      "evento": "cerrar_short",
+      "precio": 86550.16462393077,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3121
+    },
+    {
+      "tiempoMs": 1742776500000,
+      "evento": "abrir_short",
+      "precio": 86562.68400000001
+    },
+    {
+      "tiempoMs": 1742813400000,
+      "evento": "cerrar_short",
+      "precio": 87878.696484852,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6787
+    },
+    {
+      "tiempoMs": 1742813700000,
+      "evento": "abrir_short",
+      "precio": 87771.4422
+    },
+    {
+      "tiempoMs": 1743147900000,
+      "evento": "cerrar_short",
+      "precio": 85138.298934,
+      "motivo": "take_profit",
+      "pnlUsd": 2.4377
+    },
+    {
+      "tiempoMs": 1743148200000,
+      "evento": "abrir_short",
+      "precio": 85203.8542578125
+    },
+    {
+      "tiempoMs": 1743247200000,
+      "evento": "cerrar_short",
+      "precio": 82647.73863007812,
+      "motivo": "take_profit",
+      "pnlUsd": 2.7816
+    },
+    {
+      "tiempoMs": 1743247500000,
+      "evento": "abrir_short",
+      "precio": 82483.5
+    },
+    {
+      "tiempoMs": 1743432600000,
+      "evento": "cerrar_short",
+      "precio": 83737.49665049999,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.5581
+    },
+    {
+      "tiempoMs": 1743432900000,
+      "evento": "abrir_short",
+      "precio": 83559.28480000001
+    },
+    {
+      "tiempoMs": 1743520200000,
+      "evento": "cerrar_short",
+      "precio": 84829.6366068144,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3164
+    },
+    {
+      "tiempoMs": 1743520500000,
+      "evento": "abrir_short",
+      "precio": 84848.72998437501
+    },
+    {
+      "tiempoMs": 1743606300000,
+      "evento": "cerrar_short",
+      "precio": 86138.68522632745,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.2625
+    },
+    {
+      "tiempoMs": 1743606600000,
+      "evento": "abrir_short",
+      "precio": 86348.023815625
+    },
+    {
+      "tiempoMs": 1743624600000,
+      "evento": "cerrar_short",
+      "precio": 87660.77282169394,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1947
+    },
+    {
+      "tiempoMs": 1743624900000,
+      "evento": "abrir_short",
+      "precio": 87694.75441562501
+    },
+    {
+      "tiempoMs": 1743627900000,
+      "evento": "cerrar_short",
+      "precio": 85063.91178315626,
+      "motivo": "take_profit",
+      "pnlUsd": 2.3882
+    },
+    {
+      "tiempoMs": 1743628200000,
+      "evento": "abrir_short",
+      "precio": 84681.857115625
+    },
+    {
+      "tiempoMs": 1743638400000,
+      "evento": "cerrar_short",
+      "precio": 82141.40140215625,
+      "motivo": "take_profit",
+      "pnlUsd": 2.7315
+    },
+    {
+      "tiempoMs": 1743638700000,
+      "evento": "abrir_short",
+      "precio": 82283.4384578125
+    },
+    {
+      "tiempoMs": 1743644100000,
+      "evento": "cerrar_short",
+      "precio": 83534.3935726866,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4764
+    },
+    {
+      "tiempoMs": 1743644400000,
+      "evento": "abrir_short",
+      "precio": 83521.995384375
+    },
+    {
+      "tiempoMs": 1743961200000,
+      "evento": "cerrar_short",
+      "precio": 81016.33552284374,
+      "motivo": "take_profit",
+      "pnlUsd": 2.9063
+    },
+    {
+      "tiempoMs": 1743961500000,
+      "evento": "abrir_short",
+      "precio": 81057.8867421875
+    },
+    {
+      "tiempoMs": 1743971700000,
+      "evento": "cerrar_short",
+      "precio": 78626.15013992188,
+      "motivo": "take_profit",
+      "pnlUsd": 2.8077
+    },
+    {
+      "tiempoMs": 1743972000000,
+      "evento": "abrir_short",
+      "precio": 79360.0232578125
+    },
+    {
+      "tiempoMs": 1743999300000,
+      "evento": "cerrar_short",
+      "precio": 76979.22256007812,
+      "motivo": "take_profit",
+      "pnlUsd": 3.176
+    },
+    {
+      "tiempoMs": 1743999600000,
+      "evento": "abrir_short",
+      "precio": 77220.255984375
+    },
+    {
+      "tiempoMs": 1744008300000,
+      "evento": "cerrar_short",
+      "precio": 74903.64830484375,
+      "motivo": "take_profit",
+      "pnlUsd": 2.9689
+    },
+    {
+      "tiempoMs": 1744008600000,
+      "evento": "abrir_short",
+      "precio": 75142.8668578125
+    },
+    {
+      "tiempoMs": 1744014000000,
+      "evento": "cerrar_short",
+      "precio": 76285.26386265182,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.725
+    },
+    {
+      "tiempoMs": 1744014300000,
+      "evento": "abrir_short",
+      "precio": 76394.3196421875
+    },
+    {
+      "tiempoMs": 1744021200000,
+      "evento": "cerrar_short",
+      "precio": 77555.74248370767,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6494
+    },
+    {
+      "tiempoMs": 1744021500000,
+      "evento": "abrir_short",
+      "precio": 77201.6581421875
+    },
+    {
+      "tiempoMs": 1744034100000,
+      "evento": "cerrar_short",
+      "precio": 78375.35495092317,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.547
+    },
+    {
+      "tiempoMs": 1744034400000,
+      "evento": "abrir_short",
+      "precio": 78304.2344578125
+    },
+    {
+      "tiempoMs": 1744035000000,
+      "evento": "cerrar_short",
+      "precio": 79494.69373427462,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4446
+    },
+    {
+      "tiempoMs": 1744035300000,
+      "evento": "abrir_short",
+      "precio": 79513.4925578125
+    },
+    {
+      "tiempoMs": 1744035300000,
+      "evento": "cerrar_short",
+      "precio": 80722.33618516891,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3607
+    },
+    {
+      "tiempoMs": 1744035600000,
+      "evento": "abrir_short",
+      "precio": 80182.9602
+    },
+    {
+      "tiempoMs": 1744038600000,
+      "evento": "cerrar_short",
+      "precio": 77777.471394,
+      "motivo": "take_profit",
+      "pnlUsd": 2.3169
+    },
+    {
+      "tiempoMs": 1744038900000,
+      "evento": "abrir_short",
+      "precio": 77738.9491
+    },
+    {
+      "tiempoMs": 1744040400000,
+      "evento": "cerrar_short",
+      "precio": 78920.8143431673,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4721
+    },
+    {
+      "tiempoMs": 1744040700000,
+      "evento": "abrir_short",
+      "precio": 78891.7185
+    },
+    {
+      "tiempoMs": 1744066200000,
+      "evento": "cerrar_short",
+      "precio": 80091.1092963555,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4227
+    },
+    {
+      "tiempoMs": 1744066500000,
+      "evento": "abrir_short",
+      "precio": 80066.780315625
+    },
+    {
+      "tiempoMs": 1744130100000,
+      "evento": "cerrar_short",
+      "precio": 77664.77690615624,
+      "motivo": "take_profit",
+      "pnlUsd": 2.8405
+    },
+    {
+      "tiempoMs": 1744130400000,
+      "evento": "abrir_short",
+      "precio": 77539.0906421875
+    },
+    {
+      "tiempoMs": 1744161300000,
+      "evento": "cerrar_short",
+      "precio": 75212.91792292187,
+      "motivo": "take_profit",
+      "pnlUsd": 2.7865
+    },
+    {
+      "tiempoMs": 1744161600000,
+      "evento": "abrir_short",
+      "precio": 75145.0695421875
+    },
+    {
+      "tiempoMs": 1744164000000,
+      "evento": "cerrar_short",
+      "precio": 76287.50003443735,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.703
+    },
+    {
+      "tiempoMs": 1744164300000,
+      "evento": "abrir_short",
+      "precio": 76154.766
+    },
+    {
+      "tiempoMs": 1744182000000,
+      "evento": "cerrar_short",
+      "precio": 77312.54690749799,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4962
+    },
+    {
+      "tiempoMs": 1744182300000,
+      "evento": "abrir_short",
+      "precio": 77422.4108578125
+    },
+    {
+      "tiempoMs": 1744218000000,
+      "evento": "cerrar_short",
+      "precio": 78599.46377008382,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4586
+    },
+    {
+      "tiempoMs": 1744218300000,
+      "evento": "abrir_short",
+      "precio": 78699.1554578125
+    },
+    {
+      "tiempoMs": 1744219200000,
+      "evento": "cerrar_short",
+      "precio": 79895.61871823762,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.2518
+    },
+    {
+      "tiempoMs": 1744219500000,
+      "evento": "abrir_short",
+      "precio": 80748.7454578125
+    },
+    {
+      "tiempoMs": 1744221300000,
+      "evento": "cerrar_short",
+      "precio": 81976.36863500762,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.2923
+    },
+    {
+      "tiempoMs": 1744221600000,
+      "evento": "abrir_short",
+      "precio": 82145.4660578125
+    },
+    {
+      "tiempoMs": 1744232400000,
+      "evento": "cerrar_short",
+      "precio": 83394.32357828942,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3082
+    },
+    {
+      "tiempoMs": 1744232700000,
+      "evento": "abrir_short",
+      "precio": 83096.7757578125
+    },
+    {
+      "tiempoMs": 1744298100000,
+      "evento": "cerrar_short",
+      "precio": 80603.87248507813,
+      "motivo": "take_profit",
+      "pnlUsd": 1.7658
+    },
+    {
+      "tiempoMs": 1744298400000,
+      "evento": "abrir_short",
+      "precio": 80528.2895578125
+    },
+    {
+      "tiempoMs": 1744358700000,
+      "evento": "cerrar_short",
+      "precio": 81752.56114395992,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.255
+    },
+    {
+      "tiempoMs": 1744359000000,
+      "evento": "abrir_short",
+      "precio": 81498.7985421875
+    },
+    {
+      "tiempoMs": 1744366800000,
+      "evento": "cerrar_short",
+      "precio": 82737.82477642439,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.2884
+    },
+    {
+      "tiempoMs": 1744367100000,
+      "evento": "abrir_short",
+      "precio": 82633.5715421875
+    },
+    {
+      "tiempoMs": 1744393200000,
+      "evento": "cerrar_short",
+      "precio": 83889.84973034338,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1458
+    },
+    {
+      "tiempoMs": 1744393500000,
+      "evento": "abrir_short",
+      "precio": 83895.420684375
+    },
+    {
+      "tiempoMs": 1744468200000,
+      "evento": "cerrar_short",
+      "precio": 85170.88276503954,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1259
+    },
+    {
+      "tiempoMs": 1744468500000,
+      "evento": "abrir_short",
+      "precio": 84988.202084375
+    },
+    {
+      "tiempoMs": 1744724700000,
+      "evento": "cerrar_short",
+      "precio": 86280.27772066375,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1304
+    },
+    {
+      "tiempoMs": 1744725000000,
+      "evento": "abrir_short",
+      "precio": 86350.62485781251
+    },
+    {
+      "tiempoMs": 1744750200000,
+      "evento": "cerrar_short",
+      "precio": 83760.10611207814,
+      "motivo": "take_profit",
+      "pnlUsd": 2.0261
+    },
+    {
+      "tiempoMs": 1744750500000,
+      "evento": "abrir_short",
+      "precio": 83773.242
+    },
+    {
+      "tiempoMs": 1744816800000,
+      "evento": "cerrar_short",
+      "precio": 85046.846598126,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6187
+    },
+    {
+      "tiempoMs": 1744817100000,
+      "evento": "abrir_short",
+      "precio": 84981.8986578125
+    },
+    {
+      "tiempoMs": 1745195100000,
+      "evento": "cerrar_short",
+      "precio": 86273.87846310722,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.2393
+    },
+    {
+      "tiempoMs": 1745195400000,
+      "evento": "abrir_short",
+      "precio": 86165.966484375
+    },
+    {
+      "tiempoMs": 1745202000000,
+      "evento": "cerrar_short",
+      "precio": 87475.94767283695,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.7507
+    },
+    {
+      "tiempoMs": 1745202300000,
+      "evento": "abrir_short",
+      "precio": 87411.1158421875
+    },
+    {
+      "tiempoMs": 1745284800000,
+      "evento": "cerrar_short",
+      "precio": 88740.02703633627,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4427
+    },
+    {
+      "tiempoMs": 1745285100000,
+      "evento": "abrir_short",
+      "precio": 88457.601815625
+    },
+    {
+      "tiempoMs": 1745327700000,
+      "evento": "cerrar_short",
+      "precio": 89802.42273602793,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6887
+    },
+    {
+      "tiempoMs": 1745328000000,
+      "evento": "abrir_short",
+      "precio": 89488.395615625
+    },
+    {
+      "tiempoMs": 1745333100000,
+      "evento": "cerrar_short",
+      "precio": 90848.88769416935,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1401
+    },
+    {
+      "tiempoMs": 1745333400000,
+      "evento": "abrir_short",
+      "precio": 90631.7684578125
+    },
+    {
+      "tiempoMs": 1745358300000,
+      "evento": "cerrar_short",
+      "precio": 92009.64323367662,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1274
+    },
+    {
+      "tiempoMs": 1745358600000,
+      "evento": "abrir_short",
+      "precio": 93386.319
+    },
+    {
+      "tiempoMs": 1745415300000,
+      "evento": "cerrar_short",
+      "precio": 94806.07120775699,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3386
+    },
+    {
+      "tiempoMs": 1745415600000,
+      "evento": "abrir_short",
+      "precio": 93498.3981421875
+    },
+    {
+      "tiempoMs": 1745583000000,
+      "evento": "cerrar_short",
+      "precio": 94919.85428914317,
+      "motivo": "stop_loss",
+      "pnlUsd": -0.8978
+    },
+    {
+      "tiempoMs": 1745583300000,
+      "evento": "abrir_short",
+      "precio": 94745.344015625
+    },
+    {
+      "tiempoMs": 1746094500000,
+      "evento": "cerrar_short",
+      "precio": 96185.75748069453,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.0477
+    },
+    {
+      "tiempoMs": 1746094800000,
+      "evento": "abrir_short",
+      "precio": 96154.6636578125
+    },
+    {
+      "tiempoMs": 1746196500000,
+      "evento": "cerrar_short",
+      "precio": 97616.50300940222,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.2169
+    },
+    {
+      "tiempoMs": 1746196800000,
+      "evento": "abrir_short",
+      "precio": 97520.5935421875
+    },
+    {
+      "tiempoMs": 1746399900000,
+      "evento": "cerrar_short",
+      "precio": 94594.97573592188,
+      "motivo": "take_profit",
+      "pnlUsd": 1.7881
+    },
+    {
+      "tiempoMs": 1746400200000,
+      "evento": "abrir_short",
+      "precio": 94680.856915625
+    },
+    {
+      "tiempoMs": 1746571200000,
+      "evento": "cerrar_short",
+      "precio": 96120.28998331324,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.8291
+    },
+    {
+      "tiempoMs": 1746571500000,
+      "evento": "abrir_short",
+      "precio": 95980.8
+    },
+    {
+      "tiempoMs": 1746577200000,
+      "evento": "cerrar_short",
+      "precio": 97439.99610239998,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.7536
+    },
+    {
+      "tiempoMs": 1746577500000,
+      "evento": "abrir_short",
+      "precio": 97324.4296578125
+    },
+    {
+      "tiempoMs": 1746671700000,
+      "evento": "cerrar_short",
+      "precio": 98804.05296190022,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6253
+    },
+    {
+      "tiempoMs": 1746672000000,
+      "evento": "abrir_short",
+      "precio": 98569.2822
+    },
+    {
+      "tiempoMs": 1746717600000,
+      "evento": "cerrar_short",
+      "precio": 100067.83099728658,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4907
+    },
+    {
+      "tiempoMs": 1746717900000,
+      "evento": "abrir_short",
+      "precio": 100456.107884375
+    },
+    {
+      "tiempoMs": 1746736500000,
+      "evento": "cerrar_short",
+      "precio": 101983.34209254115,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.0338
+    },
+    {
+      "tiempoMs": 1746736800000,
+      "evento": "abrir_short",
+      "precio": 102143.6687421875
+    },
+    {
+      "tiempoMs": 1746739200000,
+      "evento": "cerrar_short",
+      "precio": 103696.55893807496,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1122
+    },
+    {
+      "tiempoMs": 1746739500000,
+      "evento": "abrir_short",
+      "precio": 103659.8654421875
+    },
+    {
+      "tiempoMs": 1747033200000,
+      "evento": "cerrar_short",
+      "precio": 105235.80637650506,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.16
+    },
+    {
+      "tiempoMs": 1747033500000,
+      "evento": "abrir_short",
+      "precio": 105604.171815625
+    },
+    {
+      "tiempoMs": 1747062000000,
+      "evento": "cerrar_short",
+      "precio": 102436.04666115624,
+      "motivo": "take_profit",
+      "pnlUsd": 2.6858
+    },
+    {
+      "tiempoMs": 1747062300000,
+      "evento": "abrir_short",
+      "precio": 102466.1042421875
+    },
+    {
+      "tiempoMs": 1747152600000,
+      "evento": "cerrar_short",
+      "precio": 104023.89642498147,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.312
+    },
+    {
+      "tiempoMs": 1747152900000,
+      "evento": "abrir_short",
+      "precio": 104265.7442421875
+    },
+    {
+      "tiempoMs": 1747587300000,
+      "evento": "cerrar_short",
+      "precio": 105850.89635190147,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.245
+    },
+    {
+      "tiempoMs": 1747587600000,
+      "evento": "abrir_short",
+      "precio": 105768.045284375
+    },
+    {
+      "tiempoMs": 1747631100000,
+      "evento": "cerrar_short",
+      "precio": 102595.00392584375,
+      "motivo": "take_profit",
+      "pnlUsd": 2.2198
+    },
+    {
+      "tiempoMs": 1747631400000,
+      "evento": "abrir_short",
+      "precio": 102891.5191421875
+    },
+    {
+      "tiempoMs": 1747667100000,
+      "evento": "cerrar_short",
+      "precio": 104455.77890770618,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.5829
+    },
+    {
+      "tiempoMs": 1747667400000,
+      "evento": "abrir_short",
+      "precio": 104463.899915625
+    },
+    {
+      "tiempoMs": 1747700100000,
+      "evento": "cerrar_short",
+      "precio": 106052.06458604225,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3923
+    },
+    {
+      "tiempoMs": 1747700400000,
+      "evento": "abrir_short",
+      "precio": 106438.2081
+    },
+    {
+      "tiempoMs": 1747838700000,
+      "evento": "cerrar_short",
+      "precio": 108056.38817774429,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6511
+    },
+    {
+      "tiempoMs": 1747839000000,
+      "evento": "abrir_short",
+      "precio": 107978.2984578125
+    },
+    {
+      "tiempoMs": 1747845300000,
+      "evento": "cerrar_short",
+      "precio": 109619.89252926661,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1199
+    },
+    {
+      "tiempoMs": 1747845600000,
+      "evento": "abrir_short",
+      "precio": 109433.0074578125
+    },
+    {
+      "tiempoMs": 1747849800000,
+      "evento": "cerrar_short",
+      "precio": 106150.01723407813,
+      "motivo": "take_profit",
+      "pnlUsd": 2.0578
+    },
+    {
+      "tiempoMs": 1747850100000,
+      "evento": "abrir_short",
+      "precio": 106179.05681562501
+    },
+    {
+      "tiempoMs": 1747856100000,
+      "evento": "cerrar_short",
+      "precio": 107793.29701639294,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1623
+    },
+    {
+      "tiempoMs": 1747856400000,
+      "evento": "abrir_short",
+      "precio": 108264.54588437501
+    },
+    {
+      "tiempoMs": 1747869600000,
+      "evento": "cerrar_short",
+      "precio": 109910.49177545516,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.2097
+    },
+    {
+      "tiempoMs": 1747869900000,
+      "evento": "abrir_short",
+      "precio": 109888.018
+    },
+    {
+      "tiempoMs": 1747885500000,
+      "evento": "cerrar_short",
+      "precio": 111558.64553765398,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.5362
+    },
+    {
+      "tiempoMs": 1747885800000,
+      "evento": "abrir_short",
+      "precio": 111668.6618
+    },
+    {
+      "tiempoMs": 1748002200000,
+      "evento": "cerrar_short",
+      "precio": 108318.601946,
+      "motivo": "take_profit",
+      "pnlUsd": 2.2379
+    },
+    {
+      "tiempoMs": 1748002500000,
+      "evento": "abrir_short",
+      "precio": 108078.38
+    },
+    {
+      "tiempoMs": 1748008800000,
+      "evento": "cerrar_short",
+      "precio": 109721.49561114,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.2082
+    },
+    {
+      "tiempoMs": 1748009100000,
+      "evento": "abrir_short",
+      "precio": 109928.5099
+    },
+    {
+      "tiempoMs": 1748186700000,
+      "evento": "cerrar_short",
+      "precio": 106630.654603,
+      "motivo": "take_profit",
+      "pnlUsd": 2.1185
+    },
+    {
+      "tiempoMs": 1748187000000,
+      "evento": "abrir_short",
+      "precio": 106746.84948437501
+    },
+    {
+      "tiempoMs": 1748211000000,
+      "evento": "cerrar_short",
+      "precio": 108369.72183708595,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4639
+    },
+    {
+      "tiempoMs": 1748211300000,
+      "evento": "abrir_short",
+      "precio": 108295.133515625
+    },
+    {
+      "tiempoMs": 1748242500000,
+      "evento": "cerrar_short",
+      "precio": 109941.54443046302,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.7372
+    },
+    {
+      "tiempoMs": 1748242800000,
+      "evento": "abrir_short",
+      "precio": 109863.319815625
+    },
+    {
+      "tiempoMs": 1748529000000,
+      "evento": "cerrar_short",
+      "precio": 106567.42022115625,
+      "motivo": "take_profit",
+      "pnlUsd": 2.7513
+    },
+    {
+      "tiempoMs": 1748529300000,
+      "evento": "abrir_short",
+      "precio": 106402.3168421875
+    },
+    {
+      "tiempoMs": 1748659800000,
+      "evento": "cerrar_short",
+      "precio": 103210.24733692188,
+      "motivo": "take_profit",
+      "pnlUsd": 1.9465
+    },
+    {
+      "tiempoMs": 1748660100000,
+      "evento": "abrir_short",
+      "precio": 103248.4477421875
+    },
+    {
+      "tiempoMs": 1748705400000,
+      "evento": "cerrar_short",
+      "precio": 104818.13389321197,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6968
+    },
+    {
+      "tiempoMs": 1748705700000,
+      "evento": "abrir_short",
+      "precio": 104718.9504578125
+    },
+    {
+      "tiempoMs": 1748910000000,
+      "evento": "cerrar_short",
+      "precio": 106310.99266162261,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3629
+    },
+    {
+      "tiempoMs": 1748910300000,
+      "evento": "abrir_short",
+      "precio": 106311.6318578125
+    },
+    {
+      "tiempoMs": 1749142800000,
+      "evento": "cerrar_short",
+      "precio": 103122.28290207814,
+      "motivo": "take_profit",
+      "pnlUsd": 3.1744
+    },
+    {
+      "tiempoMs": 1749143100000,
+      "evento": "abrir_short",
+      "precio": 103366.619415625
+    },
+    {
+      "tiempoMs": 1749222000000,
+      "evento": "cerrar_short",
+      "precio": 104938.10213060073,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1902
+    },
+    {
+      "tiempoMs": 1749222300000,
+      "evento": "abrir_short",
+      "precio": 104695.353615625
+    },
+    {
+      "tiempoMs": 1749402300000,
+      "evento": "cerrar_short",
+      "precio": 106287.03707664335,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1213
+    },
+    {
+      "tiempoMs": 1749402600000,
+      "evento": "abrir_short",
+      "precio": 106130.66805781251
+    },
+    {
+      "tiempoMs": 1749469200000,
+      "evento": "cerrar_short",
+      "precio": 107744.17260429543,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3509
+    },
+    {
+      "tiempoMs": 1749469500000,
+      "evento": "abrir_short",
+      "precio": 107660.4636
+    },
+    {
+      "tiempoMs": 1749503400000,
+      "evento": "cerrar_short",
+      "precio": 109297.2256281108,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3167
+    },
+    {
+      "tiempoMs": 1749503700000,
+      "evento": "abrir_short",
+      "precio": 109153.6649
+    },
+    {
+      "tiempoMs": 1749760800000,
+      "evento": "cerrar_short",
+      "precio": 105879.054953,
+      "motivo": "take_profit",
+      "pnlUsd": 2.5974
+    },
+    {
+      "tiempoMs": 1749761100000,
+      "evento": "abrir_short",
+      "precio": 105923.014284375
+    },
+    {
+      "tiempoMs": 1749777000000,
+      "evento": "cerrar_short",
+      "precio": 102745.32385584376,
+      "motivo": "take_profit",
+      "pnlUsd": 2.4728
+    },
+    {
+      "tiempoMs": 1749777300000,
+      "evento": "abrir_short",
+      "precio": 102833.03084218751
+    },
+    {
+      "tiempoMs": 1749786600000,
+      "evento": "cerrar_short",
+      "precio": 104396.40141008126,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.7206
+    },
+    {
+      "tiempoMs": 1749786900000,
+      "evento": "abrir_short",
+      "precio": 104397.819384375
+    },
+    {
+      "tiempoMs": 1749858000000,
+      "evento": "cerrar_short",
+      "precio": 105984.97943247565,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6421
+    },
+    {
+      "tiempoMs": 1749858300000,
+      "evento": "abrir_short",
+      "precio": 105964.505984375
+    },
+    {
+      "tiempoMs": 1750084200000,
+      "evento": "cerrar_short",
+      "precio": 107575.48436885544,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6657
+    },
+    {
+      "tiempoMs": 1750084500000,
+      "evento": "abrir_short",
+      "precio": 107687.8565578125
+    },
+    {
+      "tiempoMs": 1750173300000,
+      "evento": "cerrar_short",
+      "precio": 104457.22086107812,
+      "motivo": "take_profit",
+      "pnlUsd": 2.3168
+    },
+    {
+      "tiempoMs": 1750173600000,
+      "evento": "abrir_short",
+      "precio": 104429.11
+    },
+    {
+      "tiempoMs": 1750406700000,
+      "evento": "cerrar_short",
+      "precio": 106016.74575932999,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4724
+    },
+    {
+      "tiempoMs": 1750407000000,
+      "evento": "abrir_short",
+      "precio": 106000.2957
+    },
+    {
+      "tiempoMs": 1750440000000,
+      "evento": "cerrar_short",
+      "precio": 102820.286829,
+      "motivo": "take_profit",
+      "pnlUsd": 2.4119
+    },
+    {
+      "tiempoMs": 1750440300000,
+      "evento": "abrir_short",
+      "precio": 102809.5355421875
+    },
+    {
+      "tiempoMs": 1750602000000,
+      "evento": "cerrar_short",
+      "precio": 99725.24947592187,
+      "motivo": "take_profit",
+      "pnlUsd": 2.42
+    },
+    {
+      "tiempoMs": 1750602300000,
+      "evento": "abrir_short",
+      "precio": 99566.18434218751
+    },
+    {
+      "tiempoMs": 1750639200000,
+      "evento": "cerrar_short",
+      "precio": 101079.88904274178,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.2555
+    },
+    {
+      "tiempoMs": 1750639500000,
+      "evento": "abrir_short",
+      "precio": 101116.2727
+    },
+    {
+      "tiempoMs": 1750700100000,
+      "evento": "cerrar_short",
+      "precio": 102653.5433938581,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.7208
+    },
+    {
+      "tiempoMs": 1750700400000,
+      "evento": "abrir_short",
+      "precio": 102415.1144421875
+    },
+    {
+      "tiempoMs": 1750713300000,
+      "evento": "cerrar_short",
+      "precio": 103972.13142705208,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3866
+    },
+    {
+      "tiempoMs": 1750713600000,
+      "evento": "abrir_short",
+      "precio": 103995.899784375
+    },
+    {
+      "tiempoMs": 1750717200000,
+      "evento": "cerrar_short",
+      "precio": 105576.94944879683,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.5476
+    },
+    {
+      "tiempoMs": 1750717500000,
+      "evento": "abrir_short",
+      "precio": 105681.062684375
+    },
+    {
+      "tiempoMs": 1750857000000,
+      "evento": "cerrar_short",
+      "precio": 107287.73188036554,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.5502
+    },
+    {
+      "tiempoMs": 1750857300000,
+      "evento": "abrir_short",
+      "precio": 107323.531
+    },
+    {
+      "tiempoMs": 1751472300000,
+      "evento": "cerrar_short",
+      "precio": 108955.17064179298,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.039
+    },
+    {
+      "tiempoMs": 1751472600000,
+      "evento": "abrir_short",
+      "precio": 109464.305884375
+    },
+    {
+      "tiempoMs": 1752089700000,
+      "evento": "cerrar_short",
+      "precio": 111128.49172673516,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1842
+    },
+    {
+      "tiempoMs": 1752090000000,
+      "evento": "abrir_short",
+      "precio": 110879.92114218751
+    },
+    {
+      "tiempoMs": 1752165000000,
+      "evento": "cerrar_short",
+      "precio": 112565.62858331217,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3933
+    },
+    {
+      "tiempoMs": 1752165300000,
+      "evento": "abrir_short",
+      "precio": 112571.3796578125
+    },
+    {
+      "tiempoMs": 1752182100000,
+      "evento": "cerrar_short",
+      "precio": 114282.8023427502,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.0965
+    },
+    {
+      "tiempoMs": 1752182400000,
+      "evento": "abrir_short",
+      "precio": 116426.41318437501
+    },
+    {
+      "tiempoMs": 1752212700000,
+      "evento": "cerrar_short",
+      "precio": 118196.44394401705,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.2074
+    },
+    {
+      "tiempoMs": 1752213000000,
+      "evento": "abrir_short",
+      "precio": 118237.644615625
+    },
+    {
+      "tiempoMs": 1752464400000,
+      "evento": "cerrar_short",
+      "precio": 120035.21152671633,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.0895
+    },
+    {
+      "tiempoMs": 1752464700000,
+      "evento": "abrir_short",
+      "precio": 121125.56691562501
+    },
+    {
+      "tiempoMs": 1752478500000,
+      "evento": "cerrar_short",
+      "precio": 122967.03890944325,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4613
+    },
+    {
+      "tiempoMs": 1752478800000,
+      "evento": "abrir_short",
+      "precio": 122869.4212
+    },
+    {
+      "tiempoMs": 1752540000000,
+      "evento": "cerrar_short",
+      "precio": 119183.33856399999,
+      "motivo": "take_profit",
+      "pnlUsd": 2.1515
+    },
+    {
+      "tiempoMs": 1752540300000,
+      "evento": "abrir_short",
+      "precio": 119350.5235578125
+    },
+    {
+      "tiempoMs": 1752591300000,
+      "evento": "cerrar_short",
+      "precio": 115770.00785107812,
+      "motivo": "take_profit",
+      "pnlUsd": 2.98
+    },
+    {
+      "tiempoMs": 1752591600000,
+      "evento": "abrir_short",
+      "precio": 115956.4056421875
+    },
+    {
+      "tiempoMs": 1752597600000,
+      "evento": "cerrar_short",
+      "precio": 117719.29087716565,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3579
+    },
+    {
+      "tiempoMs": 1752597900000,
+      "evento": "abrir_short",
+      "precio": 117652.8631578125
+    },
+    {
+      "tiempoMs": 1752678300000,
+      "evento": "cerrar_short",
+      "precio": 119441.53963640072,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4018
+    },
+    {
+      "tiempoMs": 1752678600000,
+      "evento": "abrir_short",
+      "precio": 119594.373215625
+    },
+    {
+      "tiempoMs": 1753146900000,
+      "evento": "cerrar_short",
+      "precio": 116006.54201915624,
+      "motivo": "take_profit",
+      "pnlUsd": 2.094
+    },
+    {
+      "tiempoMs": 1753147200000,
+      "evento": "abrir_short",
+      "precio": 116760.2448421875
+    },
+    {
+      "tiempoMs": 1753169100000,
+      "evento": "cerrar_short",
+      "precio": 118535.35084452327,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.7609
+    },
+    {
+      "tiempoMs": 1753169400000,
+      "evento": "abrir_short",
+      "precio": 118506.1924578125
+    },
+    {
+      "tiempoMs": 1753210500000,
+      "evento": "cerrar_short",
+      "precio": 120307.84210174861,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.5326
+    },
+    {
+      "tiempoMs": 1753210800000,
+      "evento": "abrir_short",
+      "precio": 119744.0464
+    },
+    {
+      "tiempoMs": 1753412400000,
+      "evento": "cerrar_short",
+      "precio": 116151.72500800001,
+      "motivo": "take_profit",
+      "pnlUsd": 2.3713
+    },
+    {
+      "tiempoMs": 1753412700000,
+      "evento": "abrir_short",
+      "precio": 115978.69805781251
+    },
+    {
+      "tiempoMs": 1753497000000,
+      "evento": "cerrar_short",
+      "precio": 117741.92220438541,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.5279
+    },
+    {
+      "tiempoMs": 1753497300000,
+      "evento": "abrir_short",
+      "precio": 117698.658684375
+    },
+    {
+      "tiempoMs": 1753633800000,
+      "evento": "cerrar_short",
+      "precio": 119488.03139235354,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.5641
+    },
+    {
+      "tiempoMs": 1753634100000,
+      "evento": "abrir_short",
+      "precio": 119452.307884375
+    },
+    {
+      "tiempoMs": 1753902000000,
+      "evento": "cerrar_short",
+      "precio": 115868.73864784374,
+      "motivo": "take_profit",
+      "pnlUsd": 2.3117
+    },
+    {
+      "tiempoMs": 1753902300000,
+      "evento": "abrir_short",
+      "precio": 115911.016284375
+    },
+    {
+      "tiempoMs": 1753918800000,
+      "evento": "cerrar_short",
+      "precio": 117673.21146494635,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3976
+    },
+    {
+      "tiempoMs": 1753919100000,
+      "evento": "abrir_short",
+      "precio": 117662.0644421875
+    },
+    {
+      "tiempoMs": 1754037300000,
+      "evento": "cerrar_short",
+      "precio": 114132.20250892188,
+      "motivo": "take_profit",
+      "pnlUsd": 3.2229
+    },
+    {
+      "tiempoMs": 1754037600000,
+      "evento": "abrir_short",
+      "precio": 114408.6137
+    },
+    {
+      "tiempoMs": 1754562900000,
+      "evento": "cerrar_short",
+      "precio": 116147.9678540811,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4808
+    },
+    {
+      "tiempoMs": 1754563200000,
+      "evento": "abrir_short",
+      "precio": 116238.6460578125
+    },
+    {
+      "tiempoMs": 1754796000000,
+      "evento": "cerrar_short",
+      "precio": 118005.8221938294,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.2932
+    },
+    {
+      "tiempoMs": 1754796300000,
+      "evento": "abrir_short",
+      "precio": 118163.06578437501
+    },
+    {
+      "tiempoMs": 1754877300000,
+      "evento": "cerrar_short",
+      "precio": 119959.49887349484,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.5516
+    },
+    {
+      "tiempoMs": 1754877600000,
+      "evento": "abrir_short",
+      "precio": 120025.99
+    },
+    {
+      "tiempoMs": 1754880600000,
+      "evento": "cerrar_short",
+      "precio": 121850.74512596999,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.626
+    },
+    {
+      "tiempoMs": 1754880900000,
+      "evento": "abrir_short",
+      "precio": 121775.53845781251
+    },
+    {
+      "tiempoMs": 1754949000000,
+      "evento": "cerrar_short",
+      "precio": 118122.27230407813,
+      "motivo": "take_profit",
+      "pnlUsd": 2.5694
+    },
+    {
+      "tiempoMs": 1754949300000,
+      "evento": "abrir_short",
+      "precio": 118400.3152
+    },
+    {
+      "tiempoMs": 1755031500000,
+      "evento": "cerrar_short",
+      "precio": 120200.35519198558,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.7521
+    },
+    {
+      "tiempoMs": 1755031800000,
+      "evento": "abrir_short",
+      "precio": 120170.35955781251
+    },
+    {
+      "tiempoMs": 1755093300000,
+      "evento": "cerrar_short",
+      "precio": 121997.30953416992,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4836
+    },
+    {
+      "tiempoMs": 1755093600000,
+      "evento": "abrir_short",
+      "precio": 121752.941415625
+    },
+    {
+      "tiempoMs": 1755124800000,
+      "evento": "cerrar_short",
+      "precio": 123603.95138396672,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.0608
+    },
+    {
+      "tiempoMs": 1755125100000,
+      "evento": "abrir_short",
+      "precio": 123506.8952421875
+    },
+    {
+      "tiempoMs": 1755174600000,
+      "evento": "cerrar_short",
+      "precio": 119801.68838492187,
+      "motivo": "take_profit",
+      "pnlUsd": 2.4931
+    },
+    {
+      "tiempoMs": 1755174900000,
+      "evento": "abrir_short",
+      "precio": 118588.98058437501
+    },
+    {
+      "tiempoMs": 1755488700000,
+      "evento": "cerrar_short",
+      "precio": 115031.31116684375,
+      "motivo": "take_profit",
+      "pnlUsd": 2.2144
+    },
+    {
+      "tiempoMs": 1755489000000,
+      "evento": "abrir_short",
+      "precio": 115042.58844218751
+    },
+    {
+      "tiempoMs": 1755554400000,
+      "evento": "cerrar_short",
+      "precio": 116791.58091427408,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.796
+    },
+    {
+      "tiempoMs": 1755554700000,
+      "evento": "abrir_short",
+      "precio": 116894.21804218751
+    },
+    {
+      "tiempoMs": 1755621300000,
+      "evento": "cerrar_short",
+      "precio": 113387.39150092188,
+      "motivo": "take_profit",
+      "pnlUsd": 3.317
+    },
+    {
+      "tiempoMs": 1755621600000,
+      "evento": "abrir_short",
+      "precio": 113397.316
+    },
+    {
+      "tiempoMs": 1755871500000,
+      "evento": "cerrar_short",
+      "precio": 115121.295395148,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4522
+    },
+    {
+      "tiempoMs": 1755871800000,
+      "evento": "abrir_short",
+      "precio": 114733.751784375
+    },
+    {
+      "tiempoMs": 1755875100000,
+      "evento": "cerrar_short",
+      "precio": 116478.04901275285,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1774
+    },
+    {
+      "tiempoMs": 1755875400000,
+      "evento": "abrir_short",
+      "precio": 116457.000815625
+    },
+    {
+      "tiempoMs": 1756064100000,
+      "evento": "cerrar_short",
+      "precio": 112963.29079115625,
+      "motivo": "take_profit",
+      "pnlUsd": 2.1851
+    },
+    {
+      "tiempoMs": 1756064400000,
+      "evento": "abrir_short",
+      "precio": 112629.8679578125
+    },
+    {
+      "tiempoMs": 1756157400000,
+      "evento": "cerrar_short",
+      "precio": 109250.97191907812,
+      "motivo": "take_profit",
+      "pnlUsd": 2.7007
+    },
+    {
+      "tiempoMs": 1756157700000,
+      "evento": "abrir_short",
+      "precio": 109627.9684578125
+    },
+    {
+      "tiempoMs": 1756239900000,
+      "evento": "cerrar_short",
+      "precio": 111294.6424622766,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.657
+    },
+    {
+      "tiempoMs": 1756240200000,
+      "evento": "abrir_short",
+      "precio": 111246.6446578125
+    },
+    {
+      "tiempoMs": 1756356600000,
+      "evento": "cerrar_short",
+      "precio": 112937.92739654522,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.5523
+    },
+    {
+      "tiempoMs": 1756356900000,
+      "evento": "abrir_short",
+      "precio": 112943.703615625
+    },
+    {
+      "tiempoMs": 1756458000000,
+      "evento": "cerrar_short",
+      "precio": 109555.39250715624,
+      "motivo": "take_profit",
+      "pnlUsd": 2.7358
+    },
+    {
+      "tiempoMs": 1756458300000,
+      "evento": "abrir_short",
+      "precio": 109437.81118437501
+    },
+    {
+      "tiempoMs": 1756470600000,
+      "evento": "cerrar_short",
+      "precio": 111101.59422781106,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4183
+    },
+    {
+      "tiempoMs": 1756470900000,
+      "evento": "abrir_short",
+      "precio": 110692.857
+    },
+    {
+      "tiempoMs": 1756518900000,
+      "evento": "cerrar_short",
+      "precio": 107372.07129,
+      "motivo": "take_profit",
+      "pnlUsd": 2.4117
+    },
+    {
+      "tiempoMs": 1756519200000,
+      "evento": "abrir_short",
+      "precio": 107383.519
+    },
+    {
+      "tiempoMs": 1756600800000,
+      "evento": "cerrar_short",
+      "precio": 109016.07063935699,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6986
+    },
+    {
+      "tiempoMs": 1756601100000,
+      "evento": "abrir_short",
+      "precio": 109130.2711421875
+    },
+    {
+      "tiempoMs": 1756820700000,
+      "evento": "cerrar_short",
+      "precio": 110789.37865436215,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.7936
+    },
+    {
+      "tiempoMs": 1756821000000,
+      "evento": "abrir_short",
+      "precio": 110892.817
+    },
+    {
+      "tiempoMs": 1757056800000,
+      "evento": "cerrar_short",
+      "precio": 112578.72049685098,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.2125
+    },
+    {
+      "tiempoMs": 1757057100000,
+      "evento": "abrir_short",
+      "precio": 112661.66628437501
+    },
+    {
+      "tiempoMs": 1757562900000,
+      "evento": "cerrar_short",
+      "precio": 114374.46159689635,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.2947
+    },
+    {
+      "tiempoMs": 1757563200000,
+      "evento": "abrir_short",
+      "precio": 114331.5275578125
+    },
+    {
+      "tiempoMs": 1757637900000,
+      "evento": "cerrar_short",
+      "precio": 116069.70977127392,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4945
+    },
+    {
+      "tiempoMs": 1757638200000,
+      "evento": "abrir_short",
+      "precio": 116201.755
+    },
+    {
+      "tiempoMs": 1758520800000,
+      "evento": "cerrar_short",
+      "precio": 112715.70235,
+      "motivo": "take_profit",
+      "pnlUsd": 2.6763
+    },
+    {
+      "tiempoMs": 1758521100000,
+      "evento": "abrir_short",
+      "precio": 112417.1136421875
+    },
+    {
+      "tiempoMs": 1758822900000,
+      "evento": "cerrar_short",
+      "precio": 109044.60023292188,
+      "motivo": "take_profit",
+      "pnlUsd": 3.0862
+    },
+    {
+      "tiempoMs": 1758823200000,
+      "evento": "abrir_short",
+      "precio": 108772.1396578125
+    },
+    {
+      "tiempoMs": 1759090500000,
+      "evento": "cerrar_short",
+      "precio": 110425.8024970302,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4338
+    },
+    {
+      "tiempoMs": 1759090800000,
+      "evento": "abrir_short",
+      "precio": 110417.5136421875
+    },
+    {
+      "tiempoMs": 1759100400000,
+      "evento": "cerrar_short",
+      "precio": 112096.19110208967,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6737
+    },
+    {
+      "tiempoMs": 1759100700000,
+      "evento": "abrir_short",
+      "precio": 112057.4824578125
+    },
+    {
+      "tiempoMs": 1759155000000,
+      "evento": "cerrar_short",
+      "precio": 113761.0923636186,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6863
+    },
+    {
+      "tiempoMs": 1759155300000,
+      "evento": "abrir_short",
+      "precio": 113727.25
+    },
+    {
+      "tiempoMs": 1759308000000,
+      "evento": "cerrar_short",
+      "precio": 115456.24538174999,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.2626
+    },
+    {
+      "tiempoMs": 1759308300000,
+      "evento": "abrir_short",
+      "precio": 115563.179615625
+    },
+    {
+      "tiempoMs": 1759328100000,
+      "evento": "cerrar_short",
+      "precio": 117320.08663532134,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3434
+    },
+    {
+      "tiempoMs": 1759328400000,
+      "evento": "abrir_short",
+      "precio": 117319.0315
+    },
+    {
+      "tiempoMs": 1759363200000,
+      "evento": "cerrar_short",
+      "precio": 119102.63273589448,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.0188
+    },
+    {
+      "tiempoMs": 1759363500000,
+      "evento": "abrir_short",
+      "precio": 119000.29674218751
+    },
+    {
+      "tiempoMs": 1759431900000,
+      "evento": "cerrar_short",
+      "precio": 120809.45825355897,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.399
+    },
+    {
+      "tiempoMs": 1759432200000,
+      "evento": "abrir_short",
+      "precio": 120805.131015625
+    },
+    {
+      "tiempoMs": 1759507200000,
+      "evento": "cerrar_short",
+      "precio": 122641.73142245553,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1321
+    },
+    {
+      "tiempoMs": 1759507500000,
+      "evento": "abrir_short",
+      "precio": 122692.9565
+    },
+    {
+      "tiempoMs": 1759639500000,
+      "evento": "cerrar_short",
+      "precio": 124558.25751766948,
+      "motivo": "stop_loss",
+      "pnlUsd": -0.9792
+    },
+    {
+      "tiempoMs": 1759639800000,
+      "evento": "abrir_short",
+      "precio": 125259.646184375
+    },
+    {
+      "tiempoMs": 1759851300000,
+      "evento": "cerrar_short",
+      "precio": 121501.85679884374,
+      "motivo": "take_profit",
+      "pnlUsd": 2.3632
+    },
+    {
+      "tiempoMs": 1759851600000,
+      "evento": "abrir_short",
+      "precio": 121456.906884375
+    },
+    {
+      "tiempoMs": 1759932000000,
+      "evento": "cerrar_short",
+      "precio": 123303.41623973813,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1603
+    },
+    {
+      "tiempoMs": 1759932300000,
+      "evento": "abrir_short",
+      "precio": 122995.39600000001
+    },
+    {
+      "tiempoMs": 1760109600000,
+      "evento": "cerrar_short",
+      "precio": 119305.53412000001,
+      "motivo": "take_profit",
+      "pnlUsd": 2.0102
+    },
+    {
+      "tiempoMs": 1760109900000,
+      "evento": "abrir_short",
+      "precio": 119299.432215625
+    },
+    {
+      "tiempoMs": 1760129400000,
+      "evento": "cerrar_short",
+      "precio": 115720.44924915624,
+      "motivo": "take_profit",
+      "pnlUsd": 1.9517
+    },
+    {
+      "tiempoMs": 1760129700000,
+      "evento": "abrir_short",
+      "precio": 115305.0359421875
+    },
+    {
+      "tiempoMs": 1760130600000,
+      "evento": "cerrar_short",
+      "precio": 111845.88486392188,
+      "motivo": "take_profit",
+      "pnlUsd": 2.8894
+    },
+    {
+      "tiempoMs": 1760130900000,
+      "evento": "abrir_short",
+      "precio": 112115.1740421875
+    },
+    {
+      "tiempoMs": 1760130900000,
+      "evento": "cerrar_short",
+      "precio": 108751.71882092187,
+      "motivo": "take_profit",
+      "pnlUsd": 2.9882
+    },
+    {
+      "tiempoMs": 1760131200000,
+      "evento": "abrir_short",
+      "precio": 103420.60861562501
+    },
+    {
+      "tiempoMs": 1760131200000,
+      "evento": "cerrar_short",
+      "precio": 104992.91212840834,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6451
+    },
+    {
+      "tiempoMs": 1760131500000,
+      "evento": "abrir_short",
+      "precio": 108526.3919421875
+    },
+    {
+      "tiempoMs": 1760131500000,
+      "evento": "cerrar_short",
+      "precio": 105270.60018392188,
+      "motivo": "take_profit",
+      "pnlUsd": 2.9207
+    },
+    {
+      "tiempoMs": 1760131800000,
+      "evento": "abrir_short",
+      "precio": 109161.1634
+    },
+    {
+      "tiempoMs": 1760131800000,
+      "evento": "cerrar_short",
+      "precio": 110820.74056717019,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6199
+    },
+    {
+      "tiempoMs": 1760132100000,
+      "evento": "abrir_short",
+      "precio": 111352.3266421875
+    },
+    {
+      "tiempoMs": 1760132700000,
+      "evento": "cerrar_short",
+      "precio": 113045.21606412866,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6671
+    },
+    {
+      "tiempoMs": 1760133000000,
+      "evento": "abrir_short",
+      "precio": 112952.00664218751
+    },
+    {
+      "tiempoMs": 1760139600000,
+      "evento": "cerrar_short",
+      "precio": 114669.21599916866,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6514
+    },
+    {
+      "tiempoMs": 1760139900000,
+      "evento": "abrir_short",
+      "precio": 114529.292684375
+    },
+    {
+      "tiempoMs": 1760147400000,
+      "evento": "cerrar_short",
+      "precio": 111093.41390384376,
+      "motivo": "take_profit",
+      "pnlUsd": 2.9178
+    },
+    {
+      "tiempoMs": 1760147700000,
+      "evento": "abrir_short",
+      "precio": 111111.3748421875
+    },
+    {
+      "tiempoMs": 1760150400000,
+      "evento": "cerrar_short",
+      "precio": 112800.60107391326,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4126
+    },
+    {
+      "tiempoMs": 1760150700000,
+      "evento": "abrir_short",
+      "precio": 113129.666415625
+    },
+    {
+      "tiempoMs": 1760216100000,
+      "evento": "cerrar_short",
+      "precio": 109735.77642315625,
+      "motivo": "take_profit",
+      "pnlUsd": 2.3847
+    },
+    {
+      "tiempoMs": 1760216400000,
+      "evento": "abrir_short",
+      "precio": 110162.759915625
+    },
+    {
+      "tiempoMs": 1760244300000,
+      "evento": "cerrar_short",
+      "precio": 111837.56435462223,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6405
+    },
+    {
+      "tiempoMs": 1760244600000,
+      "evento": "abrir_short",
+      "precio": 111660.2650421875
+    },
+    {
+      "tiempoMs": 1760281500000,
+      "evento": "cerrar_short",
+      "precio": 113357.83605162386,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.5915
+    },
+    {
+      "tiempoMs": 1760281800000,
+      "evento": "abrir_short",
+      "precio": 112777.54154218751
+    },
+    {
+      "tiempoMs": 1760287500000,
+      "evento": "cerrar_short",
+      "precio": 114492.09850625337,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3519
+    },
+    {
+      "tiempoMs": 1760287800000,
+      "evento": "abrir_short",
+      "precio": 114063.18280000001
+    },
+    {
+      "tiempoMs": 1760314800000,
+      "evento": "cerrar_short",
+      "precio": 115797.2853681084,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.2746
+    },
+    {
+      "tiempoMs": 1760315100000,
+      "evento": "abrir_short",
+      "precio": 115265.8406578125
+    },
+    {
+      "tiempoMs": 1760424000000,
+      "evento": "cerrar_short",
+      "precio": 111807.86543807812,
+      "motivo": "take_profit",
+      "pnlUsd": 2.9738
+    },
+    {
+      "tiempoMs": 1760424300000,
+      "evento": "abrir_short",
+      "precio": 111763.7443421875
+    },
+    {
+      "tiempoMs": 1760469900000,
+      "evento": "cerrar_short",
+      "precio": 113462.88854742177,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6194
+    },
+    {
+      "tiempoMs": 1760470200000,
+      "evento": "abrir_short",
+      "precio": 113264.44414218751
+    },
+    {
+      "tiempoMs": 1760607000000,
+      "evento": "cerrar_short",
+      "precio": 109866.51081792188,
+      "motivo": "take_profit",
+      "pnlUsd": 2.7052
+    },
+    {
+      "tiempoMs": 1760607300000,
+      "evento": "abrir_short",
+      "precio": 109447.902915625
+    },
+    {
+      "tiempoMs": 1760607600000,
+      "evento": "cerrar_short",
+      "precio": 111111.83938365123,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3447
+    },
+    {
+      "tiempoMs": 1760607900000,
+      "evento": "abrir_short",
+      "precio": 111169.7616
+    },
+    {
+      "tiempoMs": 1760632200000,
+      "evento": "cerrar_short",
+      "precio": 107834.668752,
+      "motivo": "take_profit",
+      "pnlUsd": 2.3301
+    },
+    {
+      "tiempoMs": 1760632500000,
+      "evento": "abrir_short",
+      "precio": 107494.0984421875
+    },
+    {
+      "tiempoMs": 1760633700000,
+      "evento": "cerrar_short",
+      "precio": 109128.33122080406,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.299
+    },
+    {
+      "tiempoMs": 1760634000000,
+      "evento": "abrir_short",
+      "precio": 109161.0618578125
+    },
+    {
+      "tiempoMs": 1760686200000,
+      "evento": "cerrar_short",
+      "precio": 105886.23000207813,
+      "motivo": "take_profit",
+      "pnlUsd": 2.4195
+    },
+    {
+      "tiempoMs": 1760686500000,
+      "evento": "abrir_short",
+      "precio": 105930.3097
+    },
+    {
+      "tiempoMs": 1760867100000,
+      "evento": "cerrar_short",
+      "precio": 107540.76819836909,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4415
+    },
+    {
+      "tiempoMs": 1760867400000,
+      "evento": "abrir_short",
+      "precio": 107873.717815625
+    },
+    {
+      "tiempoMs": 1760932200000,
+      "evento": "cerrar_short",
+      "precio": 109513.72194757593,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4162
+    },
+    {
+      "tiempoMs": 1760932500000,
+      "evento": "abrir_short",
+      "precio": 110252.242015625
+    },
+    {
+      "tiempoMs": 1761058500000,
+      "evento": "cerrar_short",
+      "precio": 111928.40685098854,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.5526
+    },
+    {
+      "tiempoMs": 1761058800000,
+      "evento": "abrir_short",
+      "precio": 112105.17604218751
+    },
+    {
+      "tiempoMs": 1761063900000,
+      "evento": "cerrar_short",
+      "precio": 113809.51103355688,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.1779
+    },
+    {
+      "tiempoMs": 1761064200000,
+      "evento": "abrir_short",
+      "precio": 113577.076915625
+    },
+    {
+      "tiempoMs": 1761081600000,
+      "evento": "cerrar_short",
+      "precio": 110169.76460815626,
+      "motivo": "take_profit",
+      "pnlUsd": 1.9978
+    },
+    {
+      "tiempoMs": 1761081900000,
+      "evento": "abrir_short",
+      "precio": 110191.160484375
+    },
+    {
+      "tiempoMs": 1761130800000,
+      "evento": "cerrar_short",
+      "precio": 106885.42566984374,
+      "motivo": "take_profit",
+      "pnlUsd": 2.4953
+    },
+    {
+      "tiempoMs": 1761131100000,
+      "evento": "abrir_short",
+      "precio": 107085.0787
+    },
+    {
+      "tiempoMs": 1761141300000,
+      "evento": "cerrar_short",
+      "precio": 108713.09315147609,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3615
+    },
+    {
+      "tiempoMs": 1761141600000,
+      "evento": "abrir_short",
+      "precio": 108706.3559421875
+    },
+    {
+      "tiempoMs": 1761238200000,
+      "evento": "cerrar_short",
+      "precio": 110359.01867157656,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.2305
+    },
+    {
+      "tiempoMs": 1761238500000,
+      "evento": "abrir_short",
+      "precio": 110460.5050421875
+    },
+    {
+      "tiempoMs": 1761470400000,
+      "evento": "cerrar_short",
+      "precio": 112139.83610034386,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.2152
+    },
+    {
+      "tiempoMs": 1761470700000,
+      "evento": "abrir_short",
+      "precio": 112282.4374578125
+    },
+    {
+      "tiempoMs": 1761486000000,
+      "evento": "cerrar_short",
+      "precio": 113989.46735448361,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3885
+    },
+    {
+      "tiempoMs": 1761486300000,
+      "evento": "abrir_short",
+      "precio": 113773.443884375
+    },
+    {
+      "tiempoMs": 1761516000000,
+      "evento": "cerrar_short",
+      "precio": 115503.14155174914,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.046
+    },
+    {
+      "tiempoMs": 1761516300000,
+      "evento": "abrir_short",
+      "precio": 114726.4485578125
+    },
+    {
+      "tiempoMs": 1761753900000,
+      "evento": "cerrar_short",
+      "precio": 111284.65510107813,
+      "motivo": "take_profit",
+      "pnlUsd": 2.7061
+    },
+    {
+      "tiempoMs": 1761754200000,
+      "evento": "abrir_short",
+      "precio": 111228.046815625
+    },
+    {
+      "tiempoMs": 1761798300000,
+      "evento": "cerrar_short",
+      "precio": 107891.20541115625,
+      "motivo": "take_profit",
+      "pnlUsd": 2.0813
+    },
+    {
+      "tiempoMs": 1761798600000,
+      "evento": "abrir_short",
+      "precio": 108307.3342
+    },
+    {
+      "tiempoMs": 1761803100000,
+      "evento": "cerrar_short",
+      "precio": 109953.93060184259,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4605
+    },
+    {
+      "tiempoMs": 1761803400000,
+      "evento": "abrir_short",
+      "precio": 110185.9584
+    },
+    {
+      "tiempoMs": 1761844800000,
+      "evento": "cerrar_short",
+      "precio": 106880.379648,
+      "motivo": "take_profit",
+      "pnlUsd": 2.7559
+    },
+    {
+      "tiempoMs": 1761845100000,
+      "evento": "abrir_short",
+      "precio": 106912.31638437501
+    },
+    {
+      "tiempoMs": 1761869400000,
+      "evento": "cerrar_short",
+      "precio": 108537.70433036664,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4319
+    },
+    {
+      "tiempoMs": 1761869700000,
+      "evento": "abrir_short",
+      "precio": 108596.479484375
+    },
+    {
+      "tiempoMs": 1761901200000,
+      "evento": "cerrar_short",
+      "precio": 110247.47176197593,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.6779
+    },
+    {
+      "tiempoMs": 1761901500000,
+      "evento": "abrir_short",
+      "precio": 109965.299415625
+    },
+    {
+      "tiempoMs": 1762167300000,
+      "evento": "cerrar_short",
+      "precio": 106666.34043315625,
+      "motivo": "take_profit",
+      "pnlUsd": 2.2276
+    },
+    {
+      "tiempoMs": 1762167600000,
+      "evento": "abrir_short",
+      "precio": 106904.6148
+    },
+    {
+      "tiempoMs": 1762247400000,
+      "evento": "cerrar_short",
+      "precio": 103697.476356,
+      "motivo": "take_profit",
+      "pnlUsd": 2.9111
+    },
+    {
+      "tiempoMs": 1762247700000,
+      "evento": "abrir_short",
+      "precio": 103775.74070000001
+    },
+    {
+      "tiempoMs": 1762279200000,
+      "evento": "cerrar_short",
+      "precio": 100662.468479,
+      "motivo": "take_profit",
+      "pnlUsd": 2.7836
+    },
+    {
+      "tiempoMs": 1762279500000,
+      "evento": "abrir_short",
+      "precio": 100590.3779
+    },
+    {
+      "tiempoMs": 1762313400000,
+      "evento": "cerrar_short",
+      "precio": 102119.6534152137,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.5921
+    },
+    {
+      "tiempoMs": 1762313700000,
+      "evento": "abrir_short",
+      "precio": 102099.6775421875
+    },
+    {
+      "tiempoMs": 1762357200000,
+      "evento": "cerrar_short",
+      "precio": 103651.89893986136,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3193
+    },
+    {
+      "tiempoMs": 1762357500000,
+      "evento": "abrir_short",
+      "precio": 103482.2994
+    },
+    {
+      "tiempoMs": 1762447200000,
+      "evento": "cerrar_short",
+      "precio": 100377.830418,
+      "motivo": "take_profit",
+      "pnlUsd": 2.3888
+    },
+    {
+      "tiempoMs": 1762447500000,
+      "evento": "abrir_short",
+      "precio": 100537.185415625
+    },
+    {
+      "tiempoMs": 1762454700000,
+      "evento": "cerrar_short",
+      "precio": 102065.65224549874,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.3213
+    },
+    {
+      "tiempoMs": 1762455000000,
+      "evento": "abrir_short",
+      "precio": 102221.0517
+    },
+    {
+      "tiempoMs": 1762548000000,
+      "evento": "cerrar_short",
+      "precio": 103775.11834899508,
+      "motivo": "stop_loss",
+      "pnlUsd": -1.4108
+    },
+    {
+      "tiempoMs": 1762548300000,
+      "evento": "abrir_short",
+      "precio": 103764.039915625
+    },
+    {
+      "tiempoMs": 1762693800000,
+      "evento": "cerrar_short",
+      "precio": 102340.46399999999,
+      "motivo": "fin_episodio",
+      "pnlUsd": 1.0607
+    },
+    {
+      "tiempoMs": 1762693800000,
+      "evento": "abrir_short",
+      "precio": 0.0
+    }
+  ]
+}

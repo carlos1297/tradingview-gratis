@@ -1,32 +1,33 @@
-# TradingView Gratis 📈
+# TradingView clon 📈
 
-> **Una alternativa open-source y 100% gratis a TradingView Pro, pensada para LATAM.**
-> Velas en vivo, indicadores propios, watchlist, multi-timeframe — sin pagar USD, sin login, sin ads.
+> **Una alternativa open-source y 100% gratis a TradingView**
+> Velas en vivo, multi-ventana con distintas temporalidades, indicadores, señales del modelo RL, Liquidation Heatmap y probador de estrategias — sin pagar USD, sin login, sin ads.
 
-Plataforma de charts crypto construida sobre los datos públicos de **Binance** (WebSocket) y la misma librería de render que usa TradingView ([`lightweight-charts`](https://github.com/tradingview/lightweight-charts)).
+Visor de charts crypto construido sobre [lightweight-charts](https://github.com/tradingview/lightweight-charts) (la librería open-source de TradingView) y los datos públicos de **Binance** (REST + WebSocket). Integra la evaluación del modelo RL PPO de este repositorio: carga el `senales.json` que exporta `evaluar.py` y muestra las operaciones de la IA directamente sobre el gráfico.
 
 ---
 
 ## ✨ Features
 
-- 📊 **Velas en vivo** vía WebSocket de Binance (sin API key)
+- 📊 **Velas en vivo** vía WebSocket de Binance (sin API key), con histórico REST y reconexión con backoff exponencial
+- 🪟 **Multi-ventana**: 1, 2 o 4 charts del mismo par con temporalidades distintas (ej. BTC/USDT 1m / 5m / 15m / 1d), cada ventana con su propio selector de timeframe
+- 📐 **Indicadores estilo TradingView**: botón «Indicadores» en el header para añadir/quitar EMA 20/50/200 (superpuestas al precio) y Volumen, RSI 14, MACD 12/26/9 (cada uno en su panel propio). El registro es escalable: agregar un indicador nuevo es sumar una entrada en `lib/indicators/registro.ts`
 - 🔍 **Búsqueda de símbolo** sobre todos los pares USDT del exchange
-- ⏱️ **Multi-timeframe**: 1m / 5m / 15m / 1h / 4h / 1d / 1w
-- 📐 **Indicadores client-side**: EMA 20/50/200, RSI 14, MACD 12/26/9, Volumen
-- 👁️ **Watchlist** con precios y cambio 24h actualizándose en tiempo real
-- 🎨 **Visual idéntica a TradingView** (paleta, fuentes, layout)
-- 💾 **Persistencia** en localStorage (símbolo, timeframe, indicadores)
-- 🔌 **Reconexión robusta** del WebSocket con backoff exponencial
+- 🤖 **Señales IA**: carga `senales.json` (de `evaluar.py --guardar-curva`) y dibuja las compras/ventas del modelo como flechas en todas las ventanas
+- 🧪 **Probador de estrategias**: reconstruye los trades cerrados de la IA con métricas (win rate, profit factor, drawdown…)
+- 🔥 **Liquidation Heatmap**: mapa de calor de zonas de liquidación estimadas, superpuesto al chart en un canvas sincronizado con el rango visible
+- 👁️ **Watchlist** con precios y cambio 24h en tiempo real
+- 💾 **Persistencia** en localStorage (símbolo, ventanas, indicadores, watchlist)
 - 🌐 100% client-side — deploy estático en Vercel/Cloudflare
 
 ## 🚀 Empezar
 
 ```bash
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
-Abrí [http://localhost:3000](http://localhost:3000).
+Abrí [http://localhost:3000](http://localhost:3000). Funciona de entrada: sin licencias, sin API keys, sin formularios.
 
 ## 🛠️ Stack
 
@@ -35,93 +36,162 @@ Abrí [http://localhost:3000](http://localhost:3000).
 | Framework | Next.js 16 (App Router) |
 | Lenguaje | TypeScript |
 | Estilos | Tailwind CSS 4 + shadcn/ui |
-| Charts | [lightweight-charts](https://github.com/tradingview/lightweight-charts) v5 |
+| Charts | lightweight-charts (open source, de TradingView) |
 | Estado | Zustand (con persistencia) |
 | Iconos | lucide-react |
 | Datos | Binance Public REST + WebSocket |
+| Gestor de paquetes | bun |
 
 ## 📐 Arquitectura
 
 ```
 src/
 ├── app/
-│   ├── layout.tsx          # Root, fuente Inter, TooltipProvider, dark
-│   ├── page.tsx            # Dashboard armando el layout
-│   └── globals.css         # Paleta TradingView
+│   ├── layout.tsx             # Root, fuente Inter, TooltipProvider, dark
+│   ├── page.tsx               # Grilla multi-ventana + paneles
+│   └── globals.css            # Paleta TradingView
 ├── components/
 │   ├── chart/
-│   │   ├── PriceChart.tsx     # Chart core (lightweight-charts + panes)
-│   │   ├── SymbolSelector.tsx # Búsqueda de pares USDT
-│   │   ├── TimeframeSelector.tsx
-│   │   └── IndicatorMenu.tsx  # Toggle EMA/RSI/MACD/Volume
+│   │   ├── ChartLigero.tsx       # Chart de una ventana (velas + capas)
+│   │   ├── IndicatorMenu.tsx     # Botón «Indicadores» (diálogo del registro)
+│   │   ├── SymbolSelector.tsx    # Búsqueda de pares USDT
+│   │   └── ModelSignals.tsx      # Carga/toggle del senales.json del modelo RL
 │   ├── layout/
-│   │   ├── Header.tsx
-│   │   ├── LeftSidebar.tsx    # Iconos drawing tools (visual)
-│   │   ├── RightSidebar.tsx
-│   │   └── BottomPanel.tsx    # Stats 24h
+│   │   ├── Header.tsx            # Logo, selector, señales IA, heatmap, layout
+│   │   ├── RightSidebar.tsx      # Contiene la watchlist
+│   │   └── BottomPanel.tsx       # Stats 24h + botón del probador
+│   ├── modelos/
+│   │   ├── BarraModelosIA.tsx    # Barra de monitoreo en vivo (ancho completo)
+│   │   ├── SelectorModelo.tsx    # Pestañas para alternar entre modelos
+│   │   └── CeldaMetrica.tsx      # Celda reutilizable de métrica
+│   ├── panel/
+│   │   └── StrategyTester.tsx    # Registro de operaciones de la IA
 │   ├── watchlist/
-│   │   └── Watchlist.tsx      # Precios live multi-símbolo
-│   └── ui/                    # shadcn primitives
+│   │   └── Watchlist.tsx         # Precios live multi-símbolo
+│   └── ui/                       # shadcn primitives
 └── lib/
     ├── binance/
-    │   ├── rest.ts            # klines / ticker / exchangeInfo
-    │   ├── ws.ts              # WS multiplex + auto-reconnect
+    │   ├── rest.ts               # klines / ticker / exchangeInfo
+    │   ├── ws.ts                 # WS multiplex + auto-reconnect
     │   └── types.ts
     ├── indicators/
-    │   └── index.ts           # SMA, EMA, RSI (Wilder), MACD
+    │   ├── index.ts              # SMA, EMA, RSI (Wilder), MACD (funciones puras)
+    │   ├── registro.ts           # Registro de indicadores del chart (escalable)
+    │   └── liquidations.ts       # Cálculo del Liquidation Heatmap
+    ├── modelos/                  # ⭐ capa multi-modelo (ver abajo)
+    │   ├── tipos.ts              # Contrato canónico EstadoModeloIA
+    │   ├── adaptadores.ts        # Traducen el formato de cada motor
+    │   ├── registro.ts           # Catálogo de modelos (escalable)
+    │   ├── derivar.ts            # PnL, R/R, señal, duración (derivados)
+    │   └── useModelosIA.ts       # Sondeo de todas las fuentes
     ├── store/
-    │   └── chart-store.ts     # Zustand global state
-    └── format.ts              # formatPrice / formatPct / formatVolume
+    │   ├── chart-store.ts        # Zustand global state
+    │   └── modelos-store.ts      # Estado en vivo por modelo (efímero)
+    ├── trades.ts                 # Reconstrucción de trades + métricas de la IA
+    └── format.ts                 # formatPrice / formatPct / formatVolume
 ```
 
-## 🌐 Deploy a Vercel
+## 🤖 Varios modelos de IA a la vez
 
-```bash
-npm i -g vercel
-vercel
+El visor monitorea **varios modelos en paralelo** (PPO, SAC y los que vengan).
+Cada motor corre en su propio proyecto y publica su estado; el visor los
+muestra en la **barra superior** con un selector para alternar entre ellos.
+
+La clave es que **nada en la interfaz conoce un modelo concreto**: todos los
+componentes consumen el contrato canónico `EstadoModeloIA` (`lib/modelos/tipos.ts`).
+
+```
+motor (SAC, PPO…)  →  adaptador  →  EstadoModeloIA  →  barra · gráfico · probador
+   su propio formato              contrato canónico
 ```
 
-O conectá el repo en [vercel.com/new](https://vercel.com/new) y deploy automático. No hay variables de entorno — todo es cliente.
+Dos transportes soportados:
+
+| Transporte | Cómo publica el motor | Ejemplo |
+|---|---|---|
+| `archivo` | escribe un JSON en `public/` que el visor sondea cada 5 s | SAC → `public/estado_vivo.json` |
+| `websocket` | empuja mensajes por WS | PPO → `NEXT_PUBLIC_FEED_VIVO_URL` |
+
+**Regla de diseño:** el motor publica **hechos** (precio de entrada, nocional,
+stop loss); la interfaz calcula **lecturas** (PnL, riesgo/recompensa, señal,
+duración). Por eso la barra y las marcas del gráfico salen del mismo estado y
+no pueden contradecirse.
+
+### Agregar un modelo nuevo
+
+1. Que su motor publique el estado con el **contrato v1** (`lib/modelos/tipos.ts`).
+2. Agregar **una entrada** en `lib/modelos/registro.ts`:
+
+```ts
+{
+  id: "dqn",
+  etiqueta: "DQN",
+  descripcion: "Deep Q-Network · acciones discretas",
+  color: "#26a69a",
+  transporte: "archivo",
+  url: "/estado_vivo_dqn.json",
+  adaptar: adaptarContratoEstandar,
+}
+```
+
+No hay que tocar la barra, el gráfico, el store ni el probador de estrategias.
+Si el motor publica un formato propio, se escribe un adaptador en
+`adaptadores.ts` — es la **única** pieza que conoce ese formato.
+
+> Una fuente sin `url` (variable de entorno ausente) o cuyo archivo no existe
+> se ignora en silencio: registrar un modelo antes de tenerlo entrenado no
+> rompe nada, simplemente no aparece en el selector. Y si **ningún** motor está
+> corriendo, la barra no ocupa espacio y el visor se ve como siempre.
 
 ## 🧠 Cómo funciona
 
-### Datos históricos
-Al abrir un símbolo se hace un `GET /api/v3/klines` (REST) que trae las últimas **1000 velas** del par + timeframe activo. Se renderizan instantáneamente.
+### Multi-ventana
+El selector de layout del header (1 / 2 / 4) arma una grilla de charts del
+mismo par, cada uno con su timeframe (`ventanas` en el store). Al pasar a 4
+ventanas se precargan 1m / 5m / 15m / 1d; cada ventana puede cambiarse con su
+propia barra de timeframes.
 
-### Datos en vivo
-Una única conexión WebSocket multiplexada (`stream.binance.com`) recibe:
+### Datos históricos y en vivo
+Cada ventana pide `GET /api/v3/klines` (hasta 1000 velas de su timeframe) y
+se suscribe a una única conexión WebSocket multiplexada
+(`stream.binance.com`):
 - `<symbol>@kline_<interval>` → updates de la vela actual + cierre de velas
 - `<symbol>@miniTicker` → tickers del watchlist
 
-Al reconectarse (Binance corta el WS cada 24h) se vuelven a suscribir todos los streams activos con backoff exponencial.
+Al reconectarse (Binance corta el WS cada 24h) se vuelven a suscribir todos
+los streams activos con backoff exponencial. Cada stream admite varios
+suscriptores; se des-suscribe de Binance recién cuando se va el último.
 
-### Indicadores
-Se calculan **client-side** sobre el array de velas en cada update. Implementaciones puras de TypeScript:
-- `EMA`: seeded con SMA del primer período, luego `close * k + prev * (1-k)`
-- `RSI`: Wilder (suavizado exponencial sobre ganancias/pérdidas, período 14)
-- `MACD`: EMA(12) − EMA(26), signal = EMA(9) sobre MACD line
+### Indicadores (escalables)
+`lib/indicators/registro.ts` es el catálogo: cada indicador declara sus
+series (una EMA es 1 línea; el MACD son 2 líneas + histograma) y si va
+superpuesto al precio o en un panel propio debajo. El botón «Indicadores»
+del header lista el catálogo automáticamente, y el chart crea/quita las
+series y paneles al activarlos. Para sumar un indicador nuevo (ej.
+SuperTrend) alcanza con agregar una entrada al registro — el cálculo puro
+vive en `lib/indicators/index.ts`.
 
-Para 1000 velas y panes múltiples el costo es despreciable.
+En cada tick se actualiza solo el último punto; al cierre de vela se
+recalcula la serie completa (para 1000 velas el costo es despreciable).
 
-## ⚠️ Qué NO incluye (todavía)
+### Señales del modelo RL
+`evaluar.py --checkpoint <dir> --guardar-curva` exporta
+`evaluacion_<split>/senales.json`. El botón **Señales IA** del header lo
+carga y: (1) dibuja cada apertura/cierre como flecha sobre las velas
+(L/S/TP/SL/LIQ/C), (2) salta al período del backtest y (3) abre el
+**Probador de estrategias** con los trades reconstruidos y sus métricas
+(`lib/trades.ts`).
 
-- ❌ Pine Script (propietario de TradingView, no se puede clonar)
-- ❌ Drawing tools persistentes (Fibo, trend lines arrastrables)
-- ❌ Replay bar-by-bar
-- ❌ Alertas server-side (siguiente video de la serie)
-- ❌ Trading real (bot con API privada — video 4)
+### Liquidation Heatmap
+`lib/indicators/liquidations.ts` estima las zonas de liquidación al estilo
+Coinglass a partir de datos públicos: por cada vela asume posiciones
+apalancadas (100x/50x/25x/10x/5x, ponderadas por volumen) abiertas cerca del
+cierre, ubica sus precios de liquidación y los va consumiendo cuando el
+precio los atraviesa. El resultado se pinta en un canvas superpuesto al
+chart, sincronizado con el rango visible de tiempo y precio.
 
-## 📺 Serie de videos
+## ⚠️ Qué NO incluye (todavía) — a implementar a futuro
 
-Este repo es la base de la serie **"TradingView Gratis"**:
-
-1. ✅ **Video 1 — Base**: lo que ves acá
-2. 🔜 **Video 2 — Alertas**: Supabase + Telegram bot
-3. 🔜 **Video 3 — Indicadores AI**: SuperTrend, Ichimoku, custom con Claude
-4. 🔜 **Video 4 — Bot que opera**: API privada Binance + ejecución
-
-## 📄 Licencia
-
-MIT — usalo, forkealo, monetizalo, lo que quieras.
-
-`lightweight-charts` es Apache 2.0 con atribución a TradingView — la atribución vive en el footer/UI por requerimiento de la licencia.
+- X Volume Profile Visible Range (como en TradingView una copia) con todos los estilos
+- X Volume Footprint
+- X Order Flow

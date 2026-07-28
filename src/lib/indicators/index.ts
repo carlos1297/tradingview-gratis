@@ -88,7 +88,6 @@ export function macd(
   const emaFast = ema(candles, fast);
   const emaSlow = ema(candles, slow);
   // align: emaSlow starts later
-  const slowStartTime = emaSlow[0].time;
   const fastByTime = new Map(emaFast.map((p) => [p.time, p.value]));
   const macdLine: IndicatorPoint[] = [];
   for (const p of emaSlow) {
@@ -112,6 +111,5 @@ export function macd(
     if (s === undefined) continue;
     out.push({ time: p.time, macd: p.value, signal: s, histogram: p.value - s });
   }
-  void slowStartTime;
   return out;
 }

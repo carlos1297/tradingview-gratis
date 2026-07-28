@@ -1,14 +1,38 @@
 import type { Candle, SymbolInfo, Ticker24h, Timeframe } from "./types";
+import { REST_HOSTS } from "./endpoints";
 
-const BASE = "https://api.binance.com/api/v3";
+/**
+ * Pide un endpoint de mercado probando los hosts de Binance en orden. Un
+ * `fetch` que lanza (TypeError "Failed to fetch": red/CORS/geobloqueo) hace
+ * saltar al siguiente host; una respuesta HTTP (aunque sea error) se devuelve
+ * tal cual (no reintenta contra otro host por un 4xx/5xx). Solo si TODOS los
+ * hosts fallan a nivel de red se propaga el error.
+ */
+async function pedir(path: string, init?: RequestInit): Promise<Response> {
+  let ultimoError: unknown;
+  for (const host of REST_HOSTS) {
+    try {
+      return await fetch(`${host}${path}`, { cache: "no-store", ...init });
+    } catch (e) {
+      ultimoError = e;
+    }
+  }
+  throw ultimoError instanceof Error
+    ? ultimoError
+    : new Error("Sin conexión a Binance");
+}
 
 export async function fetchKlines(
   symbol: string,
   interval: Timeframe,
   limit = 1000,
+  endTimeMs?: number,
 ): Promise<Candle[]> {
-  const url = `${BASE}/klines?symbol=${symbol.toUpperCase()}&interval=${interval}&limit=${limit}`;
-  const res = await fetch(url, { cache: "no-store" });
+  // endTimeMs → historical review mode (e.g. the backtest window of the RL model)
+  const end = endTimeMs !== undefined ? `&endTime=${Math.floor(endTimeMs)}` : "";
+  const res = await pedir(
+    `/klines?symbol=${symbol.toUpperCase()}&interval=${interval}&limit=${limit}${end}`,
+  );
   if (!res.ok) throw new Error(`klines ${res.status}`);
   const data = (await res.json()) as unknown[][];
   return data.map((k) => ({
@@ -23,8 +47,7 @@ export async function fetchKlines(
 }
 
 export async function fetchTicker24h(symbol: string): Promise<Ticker24h> {
-  const url = `${BASE}/ticker/24hr?symbol=${symbol.toUpperCase()}`;
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await pedir(`/ticker/24hr?symbol=${symbol.toUpperCase()}`);
   if (!res.ok) throw new Error(`ticker ${res.status}`);
   const t = await res.json();
   return {
@@ -41,8 +64,7 @@ export async function fetchTicker24h(symbol: string): Promise<Ticker24h> {
 
 export async function fetchTickers24h(symbols: string[]): Promise<Ticker24h[]> {
   const arr = JSON.stringify(symbols.map((s) => s.toUpperCase()));
-  const url = `${BASE}/ticker/24hr?symbols=${encodeURIComponent(arr)}`;
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await pedir(`/ticker/24hr?symbols=${encodeURIComponent(arr)}`);
   if (!res.ok) throw new Error(`tickers ${res.status}`);
   const data = await res.json();
   return data.map((t: Record<string, string>) => ({
@@ -60,7 +82,7 @@ export async function fetchTickers24h(symbols: string[]): Promise<Ticker24h[]> {
 let cachedSymbols: SymbolInfo[] | null = null;
 export async function fetchExchangeSymbols(): Promise<SymbolInfo[]> {
   if (cachedSymbols) return cachedSymbols;
-  const res = await fetch(`${BASE}/exchangeInfo`, { cache: "force-cache" });
+  const res = await pedir(`/exchangeInfo`, { cache: "force-cache" });
   if (!res.ok) throw new Error(`exchangeInfo ${res.status}`);
   const data = await res.json();
   cachedSymbols = data.symbols

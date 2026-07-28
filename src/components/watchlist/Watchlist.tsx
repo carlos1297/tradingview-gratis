@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { fetchTickers24h } from "@/lib/binance/rest";
 import { getBinanceWS } from "@/lib/binance/ws";
@@ -23,6 +23,10 @@ export function Watchlist() {
   const openSymbolDialog = useChartStore((s) => s.setSymbolDialogOpen);
   const [rows, setRows] = useState<Record<string, Row>>({});
   const [flash, setFlash] = useState<Record<string, "up" | "down" | null>>({});
+  // último precio visto por símbolo (para la dirección del flash) y timers
+  // pendientes, fuera del estado para no meter efectos en los updaters
+  const preciosRef = useRef<Record<string, number>>({});
+  const flashTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   useEffect(() => {
     if (watchlist.length === 0) return;
@@ -38,46 +42,42 @@ export function Watchlist() {
             price: t.lastPrice,
             pct: t.priceChangePercent,
           };
+          preciosRef.current[t.symbol] = t.lastPrice;
         });
         setRows(map);
       })
       .catch(console.error);
 
+    const dispararFlash = (simbolo: string, dir: "up" | "down") => {
+      setFlash((f) => ({ ...f, [simbolo]: dir }));
+      clearTimeout(flashTimersRef.current[simbolo]);
+      flashTimersRef.current[simbolo] = setTimeout(() => {
+        setFlash((f) => ({ ...f, [simbolo]: null }));
+      }, 300);
+    };
+
     const ws = getBinanceWS();
     const unsub = ws.subscribeMiniTickers(watchlist, (tick) => {
-      setRows((prev) => {
-        const prevRow = prev[tick.symbol];
-        if (prevRow) {
-          if (tick.close > prevRow.price) {
-            setFlash((f) => ({ ...f, [tick.symbol]: "up" }));
-            setTimeout(
-              () =>
-                setFlash((f) => ({ ...f, [tick.symbol]: null })),
-              300,
-            );
-          } else if (tick.close < prevRow.price) {
-            setFlash((f) => ({ ...f, [tick.symbol]: "down" }));
-            setTimeout(
-              () =>
-                setFlash((f) => ({ ...f, [tick.symbol]: null })),
-              300,
-            );
-          }
-        }
-        return {
-          ...prev,
-          [tick.symbol]: {
-            symbol: tick.symbol,
-            price: tick.close,
-            pct: tick.pct,
-          },
-        };
-      });
+      const previo = preciosRef.current[tick.symbol];
+      preciosRef.current[tick.symbol] = tick.close;
+      if (previo !== undefined && tick.close !== previo) {
+        dispararFlash(tick.symbol, tick.close > previo ? "up" : "down");
+      }
+      setRows((prev) => ({
+        ...prev,
+        [tick.symbol]: {
+          symbol: tick.symbol,
+          price: tick.close,
+          pct: tick.pct,
+        },
+      }));
     });
 
+    const timers = flashTimersRef.current;
     return () => {
       cancelled = true;
       unsub();
+      Object.values(timers).forEach(clearTimeout);
     };
   }, [watchlist]);
 
