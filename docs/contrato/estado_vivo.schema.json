@@ -1,0 +1,242 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tradingview-clon/contrato/estado_vivo.schema.json",
+  "title": "Estado en vivo de un modelo de IA — contrato v1",
+  "description": "Objeto que publica un motor externo (SAC, PPO, …) para que TradingView-clon muestre su actividad. Ver docs/CONTRATO_MODELOS.md.",
+  "type": "object",
+  "comment": "Un motor publica dos clases de estado: los de CICLO DE VIDA (arrancando / detenido / error), que solo necesitan decir qué pasó, y los de OPERACIÓN (estado=operando), que llevan el tick completo. Lo obligatorio de cada clase se define abajo, en `required` y en `allOf`.",
+  "required": ["estado", "dineroReal", "actualizadoMs"],
+  "properties": {
+    "contrato": {
+      "description": "Versión del contrato. Ausente o 0 = legado v0.",
+      "type": "integer",
+      "const": 1
+    },
+    "modeloId": {
+      "description": "Id estable y único del modelo. Debe coincidir con el id del registro del visor.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9_-]+$"
+    },
+    "modelo": {
+      "description": "Nombre visible: \"SAC\", \"PPO\".",
+      "type": "string",
+      "minLength": 1
+    },
+    "modeloEtiqueta": {
+      "description": "Alias de `modelo`.",
+      "type": "string",
+      "minLength": 1
+    },
+    "checkpoint": {
+      "description": "Pesos en uso: \"mejor\", \"paso_300000\".",
+      "type": ["string", "null"]
+    },
+    "dineroReal": {
+      "description": "false = paper trading. El visor muestra el cartel DINERO FALSO.",
+      "type": "boolean"
+    },
+
+    "estado": {
+      "description": "Estado declarado del motor. Cualquier otro valor se lee como \"error\".",
+      "type": "string",
+      "enum": ["arrancando", "operando", "detenido", "error"]
+    },
+    "mensaje": {
+      "description": "Detalle del error o nota para el tooltip.",
+      "type": ["string", "null"]
+    },
+    "actualizadoMs": {
+      "description": "Epoch EN MILISEGUNDOS de esta escritura. Alimenta el semáforo de frescura.",
+      "type": "integer",
+      "minimum": 1000000000000
+    },
+
+    "simbolo": {
+      "description": "Par operado, en mayúsculas: \"BTCUSDT\".",
+      "type": "string",
+      "minLength": 3
+    },
+    "precio": {
+      "description": "Último precio que vio el motor.",
+      "type": ["number", "null"],
+      "exclusiveMinimum": 0
+    },
+    "ultimaVelaMs": {
+      "description": "Apertura de la última vela procesada, epoch ms.",
+      "type": ["integer", "null"]
+    },
+    "enVivo": {
+      "description": "true (default) = reloj de pared. false = replay histórico: el visor ignora el precio en vivo de Binance.",
+      "type": "boolean"
+    },
+
+    "capitalInicial": {
+      "description": "Capital con el que arrancó la corrida.",
+      "type": ["number", "null"]
+    },
+    "saldo": {
+      "description": "Billetera: incluye el PnL realizado, no el flotante.",
+      "type": ["number", "null"]
+    },
+    "equity": {
+      "description": "saldo + PnL flotante.",
+      "type": ["number", "null"]
+    },
+    "comisiones": {
+      "description": "Comisiones acumuladas de la corrida.",
+      "type": ["number", "null"]
+    },
+    "funding": {
+      "description": "Funding acumulado (perpetuos).",
+      "type": ["number", "null"]
+    },
+    "operaciones": {
+      "description": "Operaciones CERRADAS de la corrida.",
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+
+    "posicion": {
+      "description": "Lado vigente. Cualquier otro valor se lee como FLAT.",
+      "type": "string",
+      "enum": ["LONG", "SHORT", "FLAT"]
+    },
+    "precioEntrada": {
+      "description": "Precio de apertura con slippage. Sin esto el gráfico no dibuja la operación.",
+      "type": ["number", "null"],
+      "exclusiveMinimum": 0
+    },
+    "aperturaMs": {
+      "description": "Epoch ms de la apertura. Si falta se deduce de las señales.",
+      "type": ["integer", "null"]
+    },
+    "nocional": {
+      "description": "Exposición en USD = margen × apalancamiento.",
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "apalancamiento": {
+      "description": "Multiplicador de la posición.",
+      "type": ["number", "null"],
+      "minimum": 1
+    },
+    "stopLoss": {
+      "description": "Precio absoluto del stop loss.",
+      "type": ["number", "null"],
+      "exclusiveMinimum": 0
+    },
+    "takeProfit": {
+      "description": "Precio absoluto del take profit.",
+      "type": ["number", "null"],
+      "exclusiveMinimum": 0
+    },
+    "precioLiquidacion": {
+      "description": "Precio al que la posición se liquidaría.",
+      "type": ["number", "null"],
+      "exclusiveMinimum": 0
+    },
+
+    "accion": {
+      "description": "Acción continua en [-1, 1]: el signo es la dirección y |accion| la convicción. Un modelo discreto publica -1, 0 o 1.",
+      "type": ["number", "null"],
+      "minimum": -1,
+      "maximum": 1
+    },
+    "zonaMuerta": {
+      "description": "|accion| por debajo de esto = quedarse plano. Default 0.1.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "regimen": {
+      "description": "Régimen de mercado percibido. snake_case se muestra legible.",
+      "type": ["string", "null"]
+    },
+    "motivoRiesgo": {
+      "description": "Por qué el motor de riesgo vetó o recortó la decisión. null = no intervino.",
+      "type": ["string", "null"]
+    },
+
+    "senales": {
+      "description": "Aperturas y cierres en orden cronológico. Transporte de archivo: la lista COMPLETA acumulada.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/senal" }
+    },
+    "eventos": {
+      "description": "Solo WebSocket: los eventos NUEVOS de este tick. El visor los acumula.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/senal" }
+    },
+    "tipo": {
+      "description": "Solo WebSocket: \"estado\" para un tick, \"fin\" para cerrar, \"error\" para rechazar la conexión.",
+      "type": "string",
+      "enum": ["estado", "fin", "error"]
+    }
+  },
+
+  "allOf": [
+    {
+      "description": "Un tick de OPERACIÓN lleva el estado completo: identidad, mercado y posición. Los estados de ciclo de vida (arrancando / detenido / error) están exentos, porque su función es solo avisar qué pasó.",
+      "if": {
+        "properties": { "estado": { "const": "operando" } },
+        "required": ["estado"]
+      },
+      "then": {
+        "required": ["contrato", "modeloId", "simbolo", "posicion", "precio"]
+      }
+    },
+    {
+      "description": "Con posición abierta hay que publicar el precio de entrada: sin él el gráfico no puede dibujar la operación.",
+      "if": {
+        "properties": { "posicion": { "enum": ["LONG", "SHORT"] } },
+        "required": ["posicion"]
+      },
+      "then": {
+        "required": ["precioEntrada"],
+        "properties": { "precioEntrada": { "type": "number" } }
+      }
+    }
+  ],
+
+  "$defs": {
+    "senal": {
+      "type": "object",
+      "required": ["tiempoMs", "evento", "precio"],
+      "properties": {
+        "tiempoMs": {
+          "description": "Epoch EN MILISEGUNDOS, UTC. En segundos las marcas caen en 1970.",
+          "type": "integer",
+          "minimum": 1000000000000
+        },
+        "evento": {
+          "type": "string",
+          "enum": ["abrir_long", "abrir_short", "cerrar_long", "cerrar_short"]
+        },
+        "precio": {
+          "description": "Precio de ejecución con slippage.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "motivo": {
+          "description": "Solo cierres: stop_loss | take_profit | liquidacion | senal | fin_episodio…",
+          "type": "string"
+        },
+        "pnlUsd": {
+          "description": "Solo cierres: resultado NETO en USD. Sin esto el win rate y el profit factor salen en cero.",
+          "type": "number"
+        }
+      },
+      "allOf": [
+        {
+          "description": "Un cierre sin pnlUsd deja las estadísticas del Probador en cero.",
+          "if": {
+            "properties": { "evento": { "enum": ["cerrar_long", "cerrar_short"] } },
+            "required": ["evento"]
+          },
+          "then": { "required": ["pnlUsd"] }
+        }
+      ]
+    }
+  }
+}

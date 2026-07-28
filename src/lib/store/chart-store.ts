@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Timeframe } from "@/lib/binance/types";
 import { NIVELES_APALANCAMIENTO } from "@/lib/indicators/liquidations";
+import type { ModelSignalsFile } from "@/lib/modelos/senales";
 
 /**
  * Overlays propios superpuestos al chart (los indicadores clásicos viven en
@@ -103,21 +104,13 @@ const FOOTPRINT_CONFIG_DEFAULT: FootprintConfig = {
   colorPOC: "#2962ff",
 };
 
-/** One buy/sell event exported by the RL model evaluation (senales.json). */
-export interface ModelSignal {
-  tiempoMs: number;
-  evento: "abrir_long" | "abrir_short" | "cerrar_long" | "cerrar_short";
-  precio: number;
-  motivo?: string;
-  pnlUsd?: number;
-}
-
-export interface ModelSignalsFile {
-  simbolo: string;
-  split: string;
-  checkpoint?: string;
-  senales: ModelSignal[];
-}
+/**
+ * Las señales de trading son del DOMINIO, no de la interfaz: viven en
+ * `lib/modelos/senales.ts` y las usan por igual el contrato de los modelos,
+ * el cálculo de operaciones y este store. Se re-exportan acá para que los
+ * imports existentes (`from "@/lib/store/chart-store"`) sigan funcionando.
+ */
+export type { ModelSignal, ModelSignalsFile } from "@/lib/modelos/senales";
 
 export const DEFAULT_WATCHLIST = [
   "BTCUSDT",
@@ -210,7 +203,14 @@ interface ChartState {
   toggleWatchlist: () => void;
   setSoloGraficos: (v: boolean) => void;
   setSymbolDialogOpen: (v: boolean) => void;
-  setModelSignals: (f: ModelSignalsFile | null) => void;
+  /**
+   * `abrirPanel: false` actualiza las señales sin forzar la apertura del
+   * Probador — lo usan las fuentes en vivo, que refrescan solas.
+   */
+  setModelSignals: (
+    f: ModelSignalsFile | null,
+    opciones?: { abrirPanel?: boolean },
+  ) => void;
   toggleShowModelSignals: () => void;
   setTradesPanelOpen: (v: boolean) => void;
   setPosicionDemo: (p: { lado: "long" | "short" } | null) => void;
@@ -336,13 +336,19 @@ export const useChartStore = create<ChartState>()(
         set((s) => ({ watchlistVisible: !s.watchlistVisible })),
       setSoloGraficos: (soloGraficos) => set({ soloGraficos }),
       setSymbolDialogOpen: (symbolDialogOpen) => set({ symbolDialogOpen }),
-      // cargar señales abre el Probador de estrategias con el registro
-      setModelSignals: (modelSignals) =>
-        set({
+      // Cargar señales A MANO abre el Probador con el registro (es lo que el
+      // usuario acaba de pedir). Las actualizaciones EN VIVO pasan
+      // `abrirPanel: false`: un motor que publica cada pocos minutos volvería
+      // a abrir el panel que el usuario cerró, una y otra vez.
+      setModelSignals: (modelSignals, opciones) =>
+        set((s) => ({
           modelSignals,
           showModelSignals: true,
-          tradesPanelOpen: modelSignals !== null,
-        }),
+          tradesPanelOpen:
+            opciones?.abrirPanel === false
+              ? s.tradesPanelOpen // respetar lo que eligió el usuario
+              : modelSignals !== null,
+        })),
       toggleShowModelSignals: () =>
         set((s) => ({ showModelSignals: !s.showModelSignals })),
       setTradesPanelOpen: (tradesPanelOpen) => set({ tradesPanelOpen }),

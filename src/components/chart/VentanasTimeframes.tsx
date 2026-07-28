@@ -43,7 +43,7 @@ export function VentanasTimeframes() {
   const puedeCerrar = ventanas.length > 1;
 
   const celda = (v: VentanaTF) => (
-    <div className="h-full w-full p-0.5">
+    <div data-label="celda-mosaico" className="h-full w-full p-0.5">
       <VentanaFrame
         ventana={v}
         symbol={symbol}
@@ -55,7 +55,7 @@ export function VentanasTimeframes() {
 
   if (maximizada) {
     return (
-      <div className="h-full w-full p-1">
+      <div data-label="mosaico-maximizado" className="h-full w-full p-1">
         <VentanaFrame
           ventana={maximizada}
           symbol={symbol}
@@ -92,7 +92,12 @@ export function VentanasTimeframes() {
   });
 
   return (
-    <div className="h-full w-full">
+    <div
+      data-label="mosaico-ventanas"
+      data-ventanas={ventanas.length}
+      data-columnas={columnas.length}
+      className="h-full w-full"
+    >
       {/* key por cantidad de COLUMNAS (no de ventanas): al cerrar una ventana
           sin cambiar la cantidad de columnas, no se re-monta todo el mosaico
           (evita que se recarguen todas las temporalidades). */}

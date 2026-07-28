@@ -34,7 +34,11 @@ export function VentanaFrame({ ventana, symbol, maximizada, puedeCerrar }: Props
   const arrastrable = puedeCerrar && !maximizada;
 
   return (
-    <div
+    <article
+      data-label="ventana-grafico"
+      data-timeframe={ventana.timeframe}
+      data-maximizada={maximizada || undefined}
+      aria-label={`Gráfico de ${symbol} en ${ventana.timeframe}`}
       onDragOver={(e) => {
         if (!arrastrable) return;
         e.preventDefault();
@@ -59,7 +63,10 @@ export function VentanaFrame({ ventana, symbol, maximizada, puedeCerrar }: Props
         sobre ? "border-tv-blue ring-2 ring-inset ring-tv-blue/70" : "border-tv-border",
       )}
     >
-      <div className="flex h-7 shrink-0 items-center gap-1.5 border-b border-tv-border bg-tv-panel px-1.5">
+      <header
+        data-label="ventana-barra-titulo"
+        className="flex h-7 shrink-0 items-center gap-1.5 border-b border-tv-border bg-tv-panel px-1.5"
+      >
         {arrastrable && (
           <span
             draggable
@@ -89,7 +96,12 @@ export function VentanaFrame({ ventana, symbol, maximizada, puedeCerrar }: Props
         <span className="truncate text-[10px] tabular-nums text-tv-text-dim">
           {symbol}
         </span>
-        <div className="ml-auto flex items-center gap-0.5">
+        <div
+          data-label="ventana-controles"
+          role="group"
+          aria-label="Controles de la ventana"
+          className="ml-auto flex items-center gap-0.5"
+        >
           <BotonBarra
             title={maximizada ? "Restaurar" : "Maximizar"}
             onClick={() => toggleMax(ventana.id)}
@@ -110,9 +122,12 @@ export function VentanaFrame({ ventana, symbol, maximizada, puedeCerrar }: Props
             </BotonBarra>
           )}
         </div>
-      </div>
+      </header>
 
-      <div className="min-h-0 flex-1">
+      {/* min-h-0 + flex-1: el lienzo toma lo que queda tras la barra de título
+          y puede encoger por debajo de su contenido. Sin min-h-0, el gráfico
+          conservaría su alto natural y empujaría el marco hacia abajo. */}
+      <div data-label="ventana-lienzo" className="min-h-0 flex-1">
         <ChartLigero
           symbol={symbol}
           timeframe={ventana.timeframe}
@@ -120,7 +135,7 @@ export function VentanaFrame({ ventana, symbol, maximizada, puedeCerrar }: Props
           mostrarBarraTF={false}
         />
       </div>
-    </div>
+    </article>
   );
 }
 

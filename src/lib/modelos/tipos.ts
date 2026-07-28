@@ -1,4 +1,5 @@
-import type { ModelSignal } from "@/lib/store/chart-store";
+import type { ModelSignal } from "./senales";
+import type { Transporte as TransporteId } from "./transportes";
 
 /**
  * tipos.ts — Contrato CANÓNICO de un motor de IA en vivo.
@@ -14,6 +15,15 @@ import type { ModelSignal } from "@/lib/store/chart-store";
 
 /** Versión del contrato que publica el motor. v0 = JSON legado sin versionar. */
 export const CONTRATO_ACTUAL = 1;
+
+/**
+ * Cadencia por defecto de una fuente. Los dos motores del proyecto deciden
+ * por cierre de vela de 5 minutos; una fuente con otro ritmo lo declara en su
+ * entrada del registro (`msSondeo` / `msFresco`) sin tocar el núcleo.
+ */
+export const MS_SONDEO_POR_DEFECTO = 5_000;
+/** Una vela 5m + margen: pasado esto, el motor va atrasado. */
+export const MS_FRESCO_POR_DEFECTO = 6 * 60 * 1000;
 
 export type EstadoMotor = "arrancando" | "operando" | "detenido" | "error";
 
@@ -144,12 +154,16 @@ export interface VistaOperacion {
 export type SaludMotor = "operando" | "arrancando" | "atrasado" | "detenido" | "error";
 
 /**
- * Cómo llega el estado de un motor. Los dos que ya existen en el proyecto:
+ * Cómo llega el estado de un motor. El catálogo vive en
+ * `transportes/index.ts`; este tipo se deriva de sus claves, así que sumar un
+ * transporte nuevo (SSE, long-poll…) no obliga a editar este archivo.
+ *
+ * Los dos que ya existen en el proyecto:
  *   "archivo"   — el motor escribe un JSON en public/ y la interfaz lo sondea
  *                 (modelo_SAC/operar_vivo.py → estado_vivo.json)
- *   "websocket" — el motor empuja mensajes por WS (servicio_vivo/main.py)
+ *   "websocket" — el motor empuja mensajes por WS (modelo_PPO/main.py)
  */
-export type Transporte = "archivo" | "websocket";
+export type { Transporte } from "./transportes";
 
 /**
  * Traduce el JSON crudo de UN motor al contrato canónico.
@@ -176,7 +190,7 @@ export interface FuenteModelo {
   descripcion: string;
   /** Color de acento del modelo en la interfaz. */
   color: string;
-  transporte: Transporte;
+  transporte: TransporteId;
   /**
    * Origen del estado: ruta en public/ para "archivo", URL ws:// para
    * "websocket". `undefined` = fuente desactivada (p. ej. la variable de
@@ -184,4 +198,24 @@ export interface FuenteModelo {
    */
   url: string | undefined;
   adaptar: Adaptador;
+
+  // ── Cadencia (opcional; hay defaults sensatos para 5m) ────────────────
+  /**
+   * Cada cuánto sondear la fuente, en ms. Solo aplica al transporte
+   * "archivo". Default: `MS_SONDEO_POR_DEFECTO`.
+   *
+   * Es POR FUENTE porque la cadencia la fija el motor: uno que decide por
+   * vela de 5 minutos no gana nada con un sondeo de 1 s, y uno que publica
+   * cada segundo se ve entrecortado con uno de 5 s.
+   */
+  msSondeo?: number;
+  /**
+   * A partir de qué desfase el motor se considera ATRASADO, en ms. El doble
+   * de este valor lo marca DETENIDO. Default: `MS_FRESCO_POR_DEFECTO`
+   * (una vela de 5m + margen).
+   *
+   * Un motor de barras horarias con el default aparecería "detenido" el 95%
+   * del tiempo; uno de 1 minuto tardaría 12 minutos en delatar que murió.
+   */
+  msFresco?: number;
 }

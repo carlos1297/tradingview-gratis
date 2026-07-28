@@ -12,12 +12,19 @@ import {
   LineStyle,
   TickMarkType,
   type IChartApi,
+  type IPriceLine,
   type ISeriesApi,
   type ISeriesMarkersPluginApi,
   type SeriesMarker,
   type Time,
   type UTCTimestamp,
 } from "lightweight-charts";
+import {
+  COLOR_ENTRADA,
+  COLOR_GANANCIA,
+  COLOR_PERDIDA,
+  pintarPosicion,
+} from "@/lib/chart/pintarPosicion";
 import { fetchKlines } from "@/lib/binance/rest";
 import { getBinanceWS } from "@/lib/binance/ws";
 import {
@@ -144,46 +151,6 @@ function pintarOrderFlow(el: HTMLDivElement | null, l: VistaOF | null) {
     `<span style="color:${cPres}">${presion}</span>`;
 }
 
-/** Traza un rectángulo redondeado (para etiquetas sobre el canvas). */
-function trazarRectRedondeado(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
-/** Etiqueta con fondo, centrada verticalmente en `yc`, alineada a la izquierda en `x`. */
-function etiquetaCanvas(
-  ctx: CanvasRenderingContext2D,
-  texto: string,
-  x: number,
-  yc: number,
-  fondo: string,
-  color: string,
-) {
-  ctx.font = "10px Inter, system-ui, sans-serif";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  const w = ctx.measureText(texto).width;
-  const padX = 5;
-  const h = 15;
-  ctx.fillStyle = fondo;
-  trazarRectRedondeado(ctx, x, yc - h / 2, w + padX * 2, h, 3);
-  ctx.fill();
-  ctx.fillStyle = color;
-  ctx.fillText(texto, x + padX, yc + 0.5);
-  return w + padX * 2;
-}
 
 /** Locale del navegador (detecta automáticamente la región del usuario). */
 const LOCALE_LOCAL = typeof navigator !== "undefined" ? navigator.language : "es-AR";
@@ -324,9 +291,15 @@ export function ChartLigero({
   // no conoce modelos: solo recibe PosicionEnGrafico (lib/modelos/derivar.ts).
   const posicionDemo = useChartStore((s) => s.posicionDemo);
   const estadoModelo = useModeloActivo();
+  // Solo si el modelo opera el par que esta ventana muestra: si no, sus precios
+  // pertenecen a otro mercado y la operación quedaría dibujada a una altura sin
+  // sentido. Mismo criterio que ya aplican los marcadores de señales.
   const posicionReal = useMemo(
-    () => posicionParaGrafico(estadoModelo),
-    [estadoModelo],
+    () =>
+      estadoModelo && estadoModelo.simbolo.toUpperCase() === symbol.toUpperCase()
+        ? posicionParaGrafico(estadoModelo)
+        : null,
+    [estadoModelo, symbol],
   );
   const posicionEnGrafico: PosicionEnGrafico | null =
     posicionReal ??
@@ -457,6 +430,65 @@ export function ChartLigero({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Niveles de la operación en la ESCALA DE PRECIOS ─────────────────
+  //
+  // Entrada / SL / TP se publican como priceLines nativas SOLO para que su
+  // precio salga en la escala de la derecha —donde TradingView lo muestra—,
+  // con la tipografía, la precisión y la alineación del propio eje, y siguiendo
+  // el zoom sin que haya que recalcular nada.
+  //
+  // `lineVisible: false` es deliberado: la línea la dibuja el canvas. Una
+  // priceLine cruza TODO el ancho, también las velas anteriores a la apertura,
+  // y una operación que empezó hace diez velas parecería llevar ahí desde
+  // siempre. El canvas la traza desde la vela de entrada hacia la derecha, que
+  // es lo que la posición realmente abarca.
+  const lineasPosRef = useRef<IPriceLine[]>([]);
+  const entrada = posicionEnGrafico?.precioEntrada ?? null;
+  const stopLoss = posicionEnGrafico?.stopLoss ?? null;
+  const takeProfit = posicionEnGrafico?.takeProfit ?? null;
+  const ladoPos = posicionEnGrafico?.lado ?? null;
+
+  useEffect(() => {
+    const serie = serieRef.current;
+    if (!serie) return;
+    const niveles: Array<{ precio: number; color: string; titulo: string }> = [];
+    if (entrada !== null) {
+      niveles.push({ precio: entrada, color: COLOR_ENTRADA, titulo: "Entrada" });
+    }
+    if (stopLoss !== null) {
+      niveles.push({ precio: stopLoss, color: COLOR_PERDIDA, titulo: "SL" });
+    }
+    if (takeProfit !== null) {
+      niveles.push({ precio: takeProfit, color: COLOR_GANANCIA, titulo: "TP" });
+    }
+    for (const n of niveles) {
+      lineasPosRef.current.push(
+        serie.createPriceLine({
+          price: n.precio,
+          color: n.color,
+          lineWidth: 1,
+          lineStyle: LineStyle.Solid,
+          lineVisible: false, // la traza el canvas, acotada a la operación
+          axisLabelVisible: true,
+          // el nombre ya va en la cápsula sobre el gráfico; repetirlo acá
+          // dejaría el texto flotando sobre las velas por duplicado
+          title: "",
+        }),
+      );
+    }
+    return () => {
+      for (const linea of lineasPosRef.current) {
+        try {
+          serie.removePriceLine(linea);
+        } catch {
+          /* la serie ya se destruyó con el chart: nada que quitar */
+        }
+      }
+      lineasPosRef.current = [];
+    };
+  }, [entrada, stopLoss, takeProfit, ladoPos]);
+
 
   // ── Datos: histórico + vela en vivo ────────────────────────────────
   useEffect(() => {
@@ -1323,117 +1355,40 @@ export function ChartLigero({
     const xEraw = ts.timeToCoordinate(entrada.time as UTCTimestamp);
     const xAraw = ts.timeToCoordinate(ultima.time as UTCTimestamp);
     const yEc = serie.priceToCoordinate(entrada.precio);
-    const yAc = serie.priceToCoordinate(precioActual);
-    if (yEc === null || yAc === null) return;
+    if (yEc === null) return;
     const xE: number = xEraw ?? 0; // entrada fuera de vista por la izquierda → borde
     const xA: number = xAraw ?? plotW;
     const yE: number = yEc;
-    const yA: number = yAc;
-
-    const dir = pos.lado === "long" ? 1 : -1;
-    const pnlPct = dir * (precioActual / entrada.precio - 1) * 100;
-    // con nocional real el PnL es dinero de verdad; en la demo se asume 0.5 BTC
-    const pnlUsd =
-      pos.nocional !== null
-        ? (pnlPct / 100) * pos.nocional
-        : (precioActual - entrada.precio) * dir * 0.5;
-    const ganando = pnlUsd >= 0;
-    const color = ganando ? "#26a69a" : "#ef5350";
-    const AZUL = "#2962ff";
 
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, 0, plotW, plotH);
     ctx.clip();
 
-    const x0 = Math.min(xE, xA);
-    const x1 = Math.max(xE, xA);
-    const yTop = Math.min(yE, yA);
-    const yBot = Math.max(yE, yA);
-
-    // caja de P/L flotante entre la entrada y el precio actual
-    ctx.fillStyle = hexToRgba(color, 0.14);
-    ctx.fillRect(x0, yTop, x1 - x0, yBot - yTop);
-
-    // línea de entrada (sólida, azul)
-    ctx.strokeStyle = AZUL;
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([]);
-    ctx.beginPath();
-    ctx.moveTo(x0, yE);
-    ctx.lineTo(x1, yE);
-    ctx.stroke();
-
-    // línea de precio actual (punteada, color del P/L)
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 3]);
-    ctx.beginPath();
-    ctx.moveTo(x0, yA);
-    ctx.lineTo(x1, yA);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // marcador de entrada (triángulo en el sentido de la operación)
-    ctx.fillStyle = AZUL;
-    const s = 5;
-    ctx.beginPath();
-    if (pos.lado === "long") {
-      ctx.moveTo(xE, yE - s);
-      ctx.lineTo(xE - s, yE + s);
-      ctx.lineTo(xE + s, yE + s);
-    } else {
-      ctx.moveTo(xE, yE + s);
-      ctx.lineTo(xE - s, yE - s);
-      ctx.lineTo(xE + s, yE - s);
-    }
-    ctx.closePath();
-    ctx.fill();
-
-    // barreras de riesgo del motor (stop loss / take profit), si las publica.
-    // Son límites DUROS del Risk Engine: verlas sobre el gráfico explica por
-    // qué la operación se cerró donde se cerró.
-    const barreras: Array<{ precio: number; color: string; texto: string }> = [];
-    if (pos.stopLoss !== null) {
-      barreras.push({ precio: pos.stopLoss, color: "#ef5350", texto: "SL" });
-    }
-    if (pos.takeProfit !== null) {
-      barreras.push({ precio: pos.takeProfit, color: "#26a69a", texto: "TP" });
-    }
-    for (const b of barreras) {
-      const yB = serie.priceToCoordinate(b.precio);
-      if (yB === null) continue;
-      ctx.strokeStyle = b.color;
-      ctx.lineWidth = 1;
-      ctx.setLineDash([2, 4]);
-      ctx.beginPath();
-      ctx.moveTo(x0, yB);
-      ctx.lineTo(plotW, yB);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      etiquetaCanvas(
-        ctx,
-        `${b.texto} ${b.precio.toLocaleString("en-US", { maximumFractionDigits: 2 })}`,
-        x0 + 4,
-        yB - 9,
-        b.color,
-        "#ffffff",
-      );
-    }
-
-    // etiqueta de entrada
-    const tamano =
-      pos.nocional !== null ? `${pos.nocional.toFixed(0)} USD` : "0.5 BTC";
-    const etqEnt = `${pos.etiqueta} ${pos.lado === "long" ? "COMPRA" : "VENTA"} ${tamano} · ${entrada.precio.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
-    etiquetaCanvas(ctx, etqEnt, x0 + 4, yE - 9, AZUL, "#ffffff");
-
-    // etiqueta de P/L flotante en el precio actual
-    const signo = pnlUsd >= 0 ? "+" : "";
-    const etqPnl = `${signo}${pnlUsd.toFixed(2)} USD (${signo}${pnlPct.toFixed(2)}%)`;
-    ctx.font = "10px Inter, system-ui, sans-serif";
-    const wPnl = ctx.measureText(etqPnl).width + 10;
-    const xPnl = Math.max(x0 + 4, Math.min(x1 - wPnl, plotW - wPnl - 2));
-    etiquetaCanvas(ctx, etqPnl, xPnl, yA + (ganando ? -9 : 9), color, "#ffffff");
+    // Resolver precios a píxeles es lo único que puede hacer este componente
+    // (es quien tiene el chart); el dibujo en sí vive en lib/chart y no sabe
+    // nada de gráficos, así que se puede renderizar y revisar por separado.
+    const yDe = (precio: number | null) =>
+      precio === null ? null : serie.priceToCoordinate(precio);
+    pintarPosicion(
+      ctx,
+      {
+        lado: pos.lado,
+        etiqueta: pos.etiqueta,
+        precioEntrada: entrada.precio,
+        precioActual,
+        stopLoss: pos.stopLoss,
+        takeProfit: pos.takeProfit,
+        nocional: pos.nocional,
+      },
+      {
+        xEntrada: Math.min(xE, xA),
+        xFin: plotW,
+        yEntrada: yE,
+        ySl: yDe(pos.stopLoss),
+        yTp: yDe(pos.takeProfit),
+      },
+    );
 
     ctx.restore();
   }
@@ -1551,9 +1506,13 @@ export function ChartLigero({
 
   // ── Render ──────────────────────────────────────────────────────────
   return (
-    <div className="flex h-full w-full flex-col">
+    <div data-label="grafico" data-timeframe={timeframe} className="flex h-full w-full flex-col">
       {mostrarBarraTF && (
-        <div className="flex h-8 shrink-0 items-center gap-0.5 border-b border-tv-border bg-tv-panel px-2">
+        <nav
+          data-label="grafico-selector-tf"
+          aria-label="Temporalidad del gráfico"
+          className="flex h-8 shrink-0 items-center gap-0.5 border-b border-tv-border bg-tv-panel px-2"
+        >
           {TIMEFRAMES_UI.map((tf) => (
             <button
               key={tf}
@@ -1571,32 +1530,45 @@ export function ChartLigero({
           <span className="ml-auto text-[10px] tabular-nums text-tv-text-dim">
             {symbol} · {timeframe}
           </span>
-        </div>
+        </nav>
       )}
-      <div className="relative min-h-0 flex-1">
-        <div ref={contenedorRef} className="h-full w-full" />
+      {/* Lienzo: el div de lightweight-charts abajo y las capas propias en
+          canvas superpuestos. min-h-0 permite que encoja; sin él, el gráfico
+          mantendría su alto natural y desbordaría el marco hacia abajo. */}
+      <div data-label="grafico-lienzo" className="relative min-h-0 flex-1">
+        <div
+          ref={contenedorRef}
+          data-label="grafico-canvas-velas"
+          className="h-full w-full"
+        />
         <canvas
           ref={canvasFootprintRef}
+          data-label="grafico-capa-footprint"
           className="pointer-events-none absolute left-0 top-0 z-[3]"
         />
         <canvas
           ref={canvasVpvrRef}
+          data-label="grafico-capa-vpvr"
           className="pointer-events-none absolute left-0 top-0 z-[4]"
         />
         <canvas
           ref={canvasHeatmapRef}
+          data-label="grafico-capa-heatmap"
           className="pointer-events-none absolute left-0 top-0 z-[5]"
         />
         <canvas
           ref={canvasPosRef}
+          data-label="grafico-capa-posicion"
           className="pointer-events-none absolute left-0 top-0 z-[6]"
         />
         <div
           ref={leyendaRef}
+          data-label="grafico-leyenda-ohlc"
           className="pointer-events-none absolute left-2 top-2 z-[6] hidden items-center whitespace-nowrap rounded bg-tv-bg/70 px-2 py-1 text-[11px] tabular-nums backdrop-blur-sm"
         />
         <div
           ref={ofReadoutRef}
+          data-label="grafico-lectura-orderflow"
           className="pointer-events-none absolute bottom-2 left-2 z-[6] hidden items-center whitespace-nowrap rounded bg-tv-bg/80 px-2 py-1 text-[11px] tabular-nums backdrop-blur-sm"
         />
       </div>

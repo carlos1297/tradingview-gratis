@@ -42,85 +42,44 @@ Abrí [http://localhost:3000](http://localhost:3000). Funciona de entrada: sin l
 | Datos | Binance Public REST + WebSocket |
 | Gestor de paquetes | bun |
 
-## 📐 Arquitectura
+## 📚 Documentación
 
-```
-src/
-├── app/
-│   ├── layout.tsx             # Root, fuente Inter, TooltipProvider, dark
-│   ├── page.tsx               # Grilla multi-ventana + paneles
-│   └── globals.css            # Paleta TradingView
-├── components/
-│   ├── chart/
-│   │   ├── ChartLigero.tsx       # Chart de una ventana (velas + capas)
-│   │   ├── IndicatorMenu.tsx     # Botón «Indicadores» (diálogo del registro)
-│   │   ├── SymbolSelector.tsx    # Búsqueda de pares USDT
-│   │   └── ModelSignals.tsx      # Carga/toggle del senales.json del modelo RL
-│   ├── layout/
-│   │   ├── Header.tsx            # Logo, selector, señales IA, heatmap, layout
-│   │   ├── RightSidebar.tsx      # Contiene la watchlist
-│   │   └── BottomPanel.tsx       # Stats 24h + botón del probador
-│   ├── modelos/
-│   │   ├── BarraModelosIA.tsx    # Barra de monitoreo en vivo (ancho completo)
-│   │   ├── SelectorModelo.tsx    # Pestañas para alternar entre modelos
-│   │   └── CeldaMetrica.tsx      # Celda reutilizable de métrica
-│   ├── panel/
-│   │   └── StrategyTester.tsx    # Registro de operaciones de la IA
-│   ├── watchlist/
-│   │   └── Watchlist.tsx         # Precios live multi-símbolo
-│   └── ui/                       # shadcn primitives
-└── lib/
-    ├── binance/
-    │   ├── rest.ts               # klines / ticker / exchangeInfo
-    │   ├── ws.ts                 # WS multiplex + auto-reconnect
-    │   └── types.ts
-    ├── indicators/
-    │   ├── index.ts              # SMA, EMA, RSI (Wilder), MACD (funciones puras)
-    │   ├── registro.ts           # Registro de indicadores del chart (escalable)
-    │   └── liquidations.ts       # Cálculo del Liquidation Heatmap
-    ├── modelos/                  # ⭐ capa multi-modelo (ver abajo)
-    │   ├── tipos.ts              # Contrato canónico EstadoModeloIA
-    │   ├── adaptadores.ts        # Traducen el formato de cada motor
-    │   ├── registro.ts           # Catálogo de modelos (escalable)
-    │   ├── derivar.ts            # PnL, R/R, señal, duración (derivados)
-    │   └── useModelosIA.ts       # Sondeo de todas las fuentes
-    ├── store/
-    │   ├── chart-store.ts        # Zustand global state
-    │   └── modelos-store.ts      # Estado en vivo por modelo (efímero)
-    ├── trades.ts                 # Reconstrucción de trades + métricas de la IA
-    └── format.ts                 # formatPrice / formatPct / formatVolume
-```
+| Documento | Para qué |
+|---|---|
+| [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) | Capas, dependencias, flujo de datos, responsabilidad de cada módulo |
+| [docs/CONTRATO_MODELOS.md](docs/CONTRATO_MODELOS.md) | El contrato JSON campo por campo: obligatorios, opcionales, errores |
+| [docs/INTEGRAR_MODELO.md](docs/INTEGRAR_MODELO.md) | Guía paso a paso para conectar un modelo nuevo, con código |
+| [docs/contrato/estado_vivo.schema.json](docs/contrato/estado_vivo.schema.json) | JSON Schema para validar tu motor automáticamente |
 
 ## 🤖 Varios modelos de IA a la vez
 
-El visor monitorea **varios modelos en paralelo** (PPO, SAC y los que vengan).
-Cada motor corre en su propio proyecto y publica su estado; el visor los
-muestra en la **barra superior** con un selector para alternar entre ellos.
+El visor monitorea **varios modelos en paralelo** (SAC, PPO y los que vengan).
+Cada motor corre en su propio proyecto y publica su estado; el visor los muestra
+en una barra de ancho completo con un selector para alternar entre ellos.
 
 La clave es que **nada en la interfaz conoce un modelo concreto**: todos los
-componentes consumen el contrato canónico `EstadoModeloIA` (`lib/modelos/tipos.ts`).
+componentes consumen el contrato canónico `EstadoModeloIA`.
 
 ```
-motor (SAC, PPO…)  →  adaptador  →  EstadoModeloIA  →  barra · gráfico · probador
-   su propio formato              contrato canónico
+motor (SAC, PPO…) → transporte → adaptador → EstadoModeloIA → barra · gráfico · probador
+   su formato        cómo viajan   traduce     contrato único
+                      los bytes
 ```
-
-Dos transportes soportados:
-
-| Transporte | Cómo publica el motor | Ejemplo |
-|---|---|---|
-| `archivo` | escribe un JSON en `public/` que el visor sondea cada 5 s | SAC → `public/estado_vivo.json` |
-| `websocket` | empuja mensajes por WS | PPO → `NEXT_PUBLIC_FEED_VIVO_URL` |
 
 **Regla de diseño:** el motor publica **hechos** (precio de entrada, nocional,
 stop loss); la interfaz calcula **lecturas** (PnL, riesgo/recompensa, señal,
-duración). Por eso la barra y las marcas del gráfico salen del mismo estado y
-no pueden contradecirse.
+duración). Por eso la barra, el gráfico y el Probador no pueden contradecirse.
 
 ### Agregar un modelo nuevo
 
-1. Que su motor publique el estado con el **contrato v1** (`lib/modelos/tipos.ts`).
-2. Agregar **una entrada** en `lib/modelos/registro.ts`:
+**Sin tocar código**, si tu motor publica el contrato v1 — una variable de entorno:
+
+```bash
+NEXT_PUBLIC_MODELOS_EXTRA=[{"id":"dqn","etiqueta":"DQN","url":"/estado_dqn.json"}]
+```
+
+**O en el registro** (`lib/modelos/registro.ts`), si querés que venga de fábrica
+o si tu motor tiene formato propio:
 
 ```ts
 {
@@ -129,19 +88,25 @@ no pueden contradecirse.
   descripcion: "Deep Q-Network · acciones discretas",
   color: "#26a69a",
   transporte: "archivo",
-  url: "/estado_vivo_dqn.json",
+  url: "/estado_dqn.json",
   adaptar: adaptarContratoEstandar,
 }
 ```
 
-No hay que tocar la barra, el gráfico, el store ni el probador de estrategias.
-Si el motor publica un formato propio, se escribe un adaptador en
-`adaptadores.ts` — es la **única** pieza que conoce ese formato.
+En los dos casos: no se toca la barra, el gráfico, el store ni el Probador. El
+paso a paso completo está en [docs/INTEGRAR_MODELO.md](docs/INTEGRAR_MODELO.md).
 
-> Una fuente sin `url` (variable de entorno ausente) o cuyo archivo no existe
-> se ignora en silencio: registrar un modelo antes de tenerlo entrenado no
-> rompe nada, simplemente no aparece en el selector. Y si **ningún** motor está
-> corriendo, la barra no ocupa espacio y el visor se ve como siempre.
+> Una fuente sin `url` o cuyo archivo no existe se ignora en silencio: registrar
+> un modelo antes de tenerlo entrenado no rompe nada, simplemente no aparece en
+> el selector. Y si **ningún** motor está corriendo, la barra no ocupa espacio y
+> el visor se ve como siempre.
+
+## 🧪 Verificación
+
+```bash
+bun run verificar   # tsc --noEmit && eslint && bun test src
+bun test src        # 86 tests del contrato multi-modelo
+```
 
 ## 🧠 Cómo funciona
 
@@ -181,6 +146,36 @@ carga y: (1) dibuja cada apertura/cierre como flecha sobre las velas
 (L/S/TP/SL/LIQ/C), (2) salta al período del backtest y (3) abre el
 **Probador de estrategias** con los trades reconstruidos y sus métricas
 (`lib/trades.ts`).
+
+### Probador de estrategias con modelos en vivo
+
+El Probador funciona igual con un `senales.json` de backtest que con un motor
+en vivo (SAC, PPO…): las dos fuentes terminan en el mismo store
+(`chart-store.modelSignals`), así que **no hay código por modelo**.
+
+Quién alimenta qué:
+
+| Fuente | Cómo llega | Abre el panel |
+|---|---|---|
+| `senales.json` manual (botón «Señales IA») | `setModelSignals(f)` | Sí — lo acabás de pedir |
+| Modelo en vivo del registro | `useSincronizarSenales()` → `setModelSignals(f, { abrirPanel: false })` | No — respeta si lo cerraste |
+
+Dos reglas que conviene conocer:
+
+**1. Solo manda el modelo ACTIVO.** Al cambiar de pestaña en el selector, el
+Probador se recalcula con las operaciones de ese modelo. Mezclar dos motores
+daría un win rate y un factor de beneficio sin significado.
+
+**2. La operación ABIERTA no entra en las estadísticas.** Se muestra aparte, en
+una franja propia arriba del panel (lado, entrada, precio actual, PnL flotante,
+tamaño, duración, SL y TP). Sumarla al win rate o al profit factor los
+falsearía: su resultado todavía no existe. Por eso un modelo recién arrancado
+—con posición abierta y ningún cierre— muestra la franja y el aviso «sin
+operaciones cerradas todavía», en vez de tablas vacías.
+
+> Las métricas (`lib/trades.ts`) se calculan **solo sobre cierres**:
+> `buildOperaciones()` empareja cada `abrir_*` con su `cerrar_*` y descarta la
+> apertura sin pareja.
 
 ### Liquidation Heatmap
 `lib/indicators/liquidations.ts` estima las zonas de liquidación al estilo

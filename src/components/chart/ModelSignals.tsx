@@ -6,6 +6,8 @@ import {
   useChartStore,
   type ModelSignalsFile,
 } from "@/lib/store/chart-store";
+import { useModelosStore } from "@/lib/store/modelos-store";
+import { sanearSenales } from "@/lib/modelos/senales";
 
 /**
  * Loads the senales.json exported by `evaluar.py --guardar-curva` (RL model
@@ -29,7 +31,18 @@ export function ModelSignals() {
     if (!Array.isArray(parsed.senales)) {
       throw new Error("el JSON no tiene la lista 'senales'");
     }
-    setModelSignals(parsed);
+    // MISMA frontera de confianza que aplican los adaptadores a los motores en
+    // vivo. Un senales.json es un archivo generado por otro proceso, igual de
+    // externo: sin sanear, una señal a precio 0 —las emitía evaluar.py al
+    // cerrar por fin de episodio— llegaba al gráfico y le arruinaba la escala
+    // de precios. Los archivos ya generados siguen en disco, así que el
+    // guardia tiene que estar acá y no solo del lado del motor.
+    const senales = sanearSenales(parsed.senales);
+    const descartadas = parsed.senales.length - senales.length;
+    if (descartadas > 0) {
+      console.warn(`[senales] ${descartadas} señal(es) inválida(s) descartada(s)`);
+    }
+    setModelSignals({ ...parsed, senales });
     // jump to the symbol the model traded so the markers are visible
     if (parsed.simbolo) setSymbol(parsed.simbolo.toUpperCase());
   }
@@ -42,6 +55,17 @@ export function ModelSignals() {
       try {
         const respuesta = await fetch("/senales.json", { cache: "no-store" });
         if (!respuesta.ok) return; // sin auto-señales: queda el botón manual
+        // Un motor EN VIVO ya publicó su corrida mientras bajaba este archivo:
+        // el backtest no puede pisarla. Las dos fuentes escriben en el mismo
+        // `modelSignals`, así que sin este guardia el ganador dependía de cuál
+        // de los dos fetch terminaba último — y `senales.json` además salta de
+        // símbolo, moviendo el gráfico al período del backtest sin que nadie
+        // lo pidiera. El botón manual sigue funcionando: si lo cargás a mano,
+        // es porque lo querés.
+        if (useModelosStore.getState().modeloActivo) {
+          console.info("senales.json ignorado: hay un modelo en vivo publicando");
+          return;
+        }
         aplicarSenales((await respuesta.json()) as ModelSignalsFile);
         console.info("senales.json auto-cargado desde public/");
       } catch {

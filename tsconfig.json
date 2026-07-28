@@ -12,6 +12,11 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
+    // `bun` trae el módulo "bun:test" que usan los tests de src/**/__tests__ y,
+    // por dependencia, los tipos de node. Sin declararlo acá TypeScript no
+    // incluye los @types automáticamente y `tsc --noEmit` no encuentra el
+    // módulo (los tests igual corren: los ejecuta Bun, no tsc).
+    "types": ["bun"],
     "incremental": true,
     "plugins": [
       {

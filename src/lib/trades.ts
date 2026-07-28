@@ -1,8 +1,12 @@
-import type { ModelSignal } from "@/lib/store/chart-store";
+import { esApertura, type ModelSignal } from "@/lib/modelos/senales";
 
 /**
  * Reconstructs the AI's closed trades and profitability stats from the
  * senales.json events — powers the Strategy Tester panel.
+ *
+ * Módulo PURO: no toca React ni ningún store. Lo consumen el Probador de
+ * estrategias y `lib/modelos/derivar.ts`, de modo que el PnL realizado del
+ * panel y el de la lista de operaciones no pueden diferir nunca.
  */
 
 export interface OperacionIA {
@@ -40,7 +44,7 @@ export function buildOperaciones(senales: ModelSignal[]): OperacionIA[] {
   let acumulado = 0;
 
   for (const s of senales) {
-    if (s.evento === "abrir_long" || s.evento === "abrir_short") {
+    if (esApertura(s)) {
       abierta = {
         lado: s.evento === "abrir_long" ? "long" : "short",
         tiempoMs: s.tiempoMs,

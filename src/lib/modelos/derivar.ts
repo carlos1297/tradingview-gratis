@@ -1,4 +1,5 @@
 import { buildOperaciones } from "@/lib/trades";
+import { MS_FRESCO_POR_DEFECTO } from "./tipos";
 import type {
   EstadoModeloIA,
   LadoPosicion,
@@ -21,8 +22,12 @@ import type {
  * lista de operaciones no puedan diferir nunca.
  */
 
-/** Una vela 5m + margen: pasado esto, el motor va atrasado. */
-export const MS_FRESCO = 6 * 60 * 1000;
+/**
+ * Umbral de frescura por defecto (una vela 5m + margen). Cada fuente puede
+ * declarar el suyo con `msFresco` — un motor horario o uno de 1 segundo no se
+ * juzgan con la misma vara.
+ */
+export const MS_FRESCO = MS_FRESCO_POR_DEFECTO;
 
 /**
  * Lo que el GRÁFICO necesita para dibujar la operación abierta.
@@ -84,12 +89,16 @@ const DIRECCION: Record<LadoPosicion, number> = { LONG: 1, SHORT: -1, FLAT: 0 };
  * `estado`: si el proceso muere, el JSON se congela con "operando" y solo el
  * desfase lo delata.
  */
-export function saludMotor(estado: EstadoModeloIA, ahoraMs: number): SaludMotor {
+export function saludMotor(
+  estado: EstadoModeloIA,
+  ahoraMs: number,
+  msFresco: number = MS_FRESCO_POR_DEFECTO,
+): SaludMotor {
   if (estado.estado === "error") return "error";
   const desfase = ahoraMs - estado.actualizadoMs;
-  if (estado.estado === "detenido" || desfase > MS_FRESCO * 2) return "detenido";
+  if (estado.estado === "detenido" || desfase > msFresco * 2) return "detenido";
   if (estado.estado === "arrancando") return "arrancando";
-  if (desfase > MS_FRESCO) return "atrasado";
+  if (desfase > msFresco) return "atrasado";
   return "operando";
 }
 

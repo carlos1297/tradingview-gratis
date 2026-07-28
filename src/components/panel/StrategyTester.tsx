@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, FlaskConical, Play, TrendingUp, X } from "lucide-react";
+import { formatPrecioEstable } from "@/lib/format";
+import { vistaOperacion } from "@/lib/modelos/derivar";
+import { useModeloActivo } from "@/lib/store/modelos-store";
 import { useChartStore } from "@/lib/store/chart-store";
 import {
   buildOperaciones,
@@ -54,12 +57,43 @@ export function StrategyTester() {
   const setPosicionDemo = useChartStore((s) => s.setPosicionDemo);
   const [pestana, setPestana] = useState<Pestana>("resumen");
   const [demo, setDemo] = useState(false);
+  // Posición abierta del modelo activo: el mismo estado del que sale la barra
+  // de modelos y el dibujo del gráfico, así los tres coinciden siempre.
+  const estadoModelo = useModeloActivo();
+  // reloj de 1 s: hace avanzar la duración de la operación en curso sin
+  // depender de que el motor publique (decide cada 5 minutos)
+  const [ahora, setAhora] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setAhora(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const abierta = useMemo(() => {
+    if (!estadoModelo || estadoModelo.posicion === "FLAT") return null;
+    return vistaOperacion(estadoModelo, estadoModelo.precio, ahora);
+  }, [estadoModelo, ahora]);
 
   // al cargar señales reales, sacar la operación de demo del gráfico
   useEffect(() => {
     if (modelSignals && posicionDemo) setPosicionDemo(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modelSignals]);
+
+  // Atajo P: abre/cierra el Probador. Es la salida de emergencia — funciona
+  // aunque la barra inferior (el otro camino) no se vea por cualquier motivo.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "p" && e.key !== "P") return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      // no robarle la tecla a un campo de texto (buscador de símbolo, etc.)
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) {
+        return;
+      }
+      setAbierto(!useChartStore.getState().tradesPanelOpen);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [setAbierto]);
 
   const salirDemo = () => {
     setDemo(false);
@@ -73,14 +107,36 @@ export function StrategyTester() {
 
   const resumen = useMemo(() => computeResumenTV(operaciones), [operaciones]);
 
-  if (!abierto) return null;
+  // Cerrado = no ocupa nada. Vive dentro de la región elástica de page.tsx
+  // (no es una fila del grid), así que devolver un elemento vacío es inocuo:
+  // el mosaico se queda con todo el espacio.
+  if (!abierto) return <div data-label="probador-cerrado" aria-hidden />;
 
-  const hayDatos = operaciones.length > 0;
+  // La operación ABIERTA no es una operación cerrada: no entra en las
+  // estadísticas (contarla falsearía win rate y profit factor, porque su
+  // resultado todavía no existe). Pero tampoco puede faltar: un modelo recién
+  // arrancado, con una posición abierta y ningún cierre, dejaba el panel en
+  // "no hay datos" diciendo que conectaras el feed — con el feed conectado.
+  const hayCerradas = operaciones.length > 0;
+  const hayDatos = hayCerradas || abierta !== null;
 
   return (
-    <div className="flex h-[320px] shrink-0 flex-col border-t border-tv-border bg-tv-panel">
+    // Alto DESEADO 320 px, con tope del 45% de la región elástica (los gráficos
+    // + este panel). El tope es en %, nunca en vh: vh mide la ventana del
+    // navegador, que puede ser más alta que el área visible — pidiendo de más,
+    // el faltante lo pagaba el mosaico hasta quedar en cero y los gráficos
+    // desaparecían sin dejar scroll. En % del espacio real eso no puede pasar:
+    // al mosaico siempre le queda el 55%.
+    <section
+      data-label="probador-estrategias"
+      aria-label="Probador de estrategias"
+      className="flex h-80 max-h-[45%] shrink-0 flex-col border-t border-tv-border bg-tv-panel"
+    >
       {/* Barra de pestañas, como el Strategy Tester original */}
-      <div className="flex h-9 shrink-0 items-center border-b border-tv-border px-2">
+      <header
+        data-label="probador-barra-titulo"
+        className="flex h-9 shrink-0 items-center border-b border-tv-border px-2"
+      >
         <div className="flex items-center gap-1.5 pr-3 text-xs font-semibold text-tv-text">
           <FlaskConical className="h-3.5 w-3.5 text-tv-blue" />
           <span>Probador de estrategias</span>
@@ -154,10 +210,18 @@ export function StrategyTester() {
         >
           <ChevronDown className="h-4 w-4" />
         </button>
-      </div>
+      </header>
+
+      {/* La posición abierta se muestra SIEMPRE arriba, separada de las
+          estadísticas: es información en curso, no un resultado. */}
+      {abierta && estadoModelo && (
+        <FranjaAbierta vista={abierta} modelo={estadoModelo.modeloEtiqueta} />
+      )}
 
       {!hayDatos ? (
         <EstadoVacio onDemo={() => setDemo(true)} />
+      ) : !hayCerradas ? (
+        <SinCerradas modelo={estadoModelo?.modeloEtiqueta ?? null} />
       ) : pestana === "resumen" ? (
         <Resumen operaciones={operaciones} m={resumen.todas} />
       ) : pestana === "rendimiento" ? (
@@ -165,7 +229,7 @@ export function StrategyTester() {
       ) : (
         <ListaOperaciones operaciones={operaciones} />
       )}
-    </div>
+    </section>
   );
 }
 
@@ -195,19 +259,111 @@ function TabBtn({
 
 function EstadoVacio({ onDemo }: { onDemo: () => void }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-      <div className="max-w-md text-xs text-tv-text-muted">
-        Conectá el feed del modelo en vivo (<span className="text-tv-text">operar.sh</span>)
-        para ver el rendimiento real, o previsualizá el panel con datos de ejemplo.
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-auto px-4 text-center">
+      <div className="max-w-xl text-xs text-tv-text-muted">
+        Ningún modelo publicó operaciones todavía. Arrancá un motor —por ejemplo
+        el SAC con{" "}
+        <span className="rounded bg-tv-bg px-1 py-0.5 font-mono text-[11px] text-tv-text">
+          python operar_vivo.py
+        </span>{" "}
+        en <span className="text-tv-text">modelo_SAC/</span>— o cargá un{" "}
+        <span className="text-tv-text">senales.json</span> de backtest con el
+        botón «Señales IA». También podés previsualizar el panel con datos de
+        ejemplo.
       </div>
       <button
         onClick={onDemo}
-        className="flex items-center gap-1.5 rounded-md bg-tv-blue px-3 py-1.5 text-xs font-medium text-white hover:bg-tv-blue/90"
+        className="flex shrink-0 items-center gap-1.5 rounded-md bg-tv-blue px-3 py-1.5 text-xs font-medium text-white hover:bg-tv-blue/90"
       >
         <Play className="h-3.5 w-3.5" />
         Ver demostración
       </button>
     </div>
+  );
+}
+
+/**
+ * Hay una posición abierta pero ningún cierre todavía: no se puede calcular
+ * nada (win rate, profit factor…) porque no hay resultados. Se explica en vez
+ * de mostrar tablas vacías o, peor, el mensaje de "conectá el feed".
+ */
+function SinCerradas({ modelo }: { modelo: string | null }) {
+  return (
+    <div className="flex min-h-0 flex-1 items-center justify-center px-4 text-center">
+      <div className="max-w-xl text-xs text-tv-text-muted">
+        {modelo ?? "El modelo"} tiene una operación <strong>en curso</strong> y
+        todavía ningún cierre. Las métricas (rentabilidad, factor de beneficio,
+        drawdown) aparecen en cuanto cierre la primera: se calculan solo sobre
+        operaciones terminadas, porque el resultado de la abierta aún no existe.
+      </div>
+    </div>
+  );
+}
+
+/** Franja con la operación EN CURSO del modelo activo. */
+function FranjaAbierta({
+  vista,
+  modelo,
+}: {
+  vista: ReturnType<typeof vistaOperacion>;
+  modelo: string;
+}) {
+  const largo = vista.lado === "LONG";
+  const pnl = vista.pnlNoRealizadoUsd;
+  return (
+    <div className="flex shrink-0 items-center gap-4 overflow-x-auto border-b border-tv-border bg-tv-bg/40 px-4 py-2 text-[11px]">
+      <span className="flex shrink-0 items-center gap-1.5 font-semibold text-tv-text">
+        <span className="inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-tv-green" />
+        {modelo} · operación abierta
+      </span>
+      <span
+        className={cn(
+          "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase",
+          largo ? "bg-tv-green/15 text-tv-green" : "bg-tv-red/15 text-tv-red",
+        )}
+      >
+        {vista.lado}
+      </span>
+      <DatoAbierta etq="Entrada" v={vista.precioEntrada !== null ? formatPrecioEstable(vista.precioEntrada) : "—"} />
+      <DatoAbierta etq="Actual" v={vista.precioActual !== null ? formatPrecioEstable(vista.precioActual) : "—"} />
+      <DatoAbierta
+        etq="PnL flotante"
+        v={
+          pnl !== null
+            ? `${pnl < 0 ? "−" : "+"}${Math.abs(pnl).toFixed(2)} USD`
+            : "—"
+        }
+        clase={claseSigno(pnl ?? 0)}
+      />
+      <DatoAbierta
+        etq="%"
+        v={
+          vista.pnlNoRealizadoPct !== null
+            ? `${vista.pnlNoRealizadoPct < 0 ? "−" : "+"}${Math.abs(vista.pnlNoRealizadoPct).toFixed(2)} %`
+            : "—"
+        }
+        clase={claseSigno(vista.pnlNoRealizadoPct ?? 0)}
+      />
+      <DatoAbierta etq="Tamaño" v={vista.nocional !== null ? `${vista.nocional.toFixed(0)} USD` : "—"} />
+      <DatoAbierta etq="Duración" v={vista.duracionMs !== null ? formatDuracion(vista.duracionMs) : "—"} />
+      <DatoAbierta etq="SL" v={vista.stopLoss !== null ? formatPrecioEstable(vista.stopLoss) : "—"} clase="text-tv-red" />
+      <DatoAbierta etq="TP" v={vista.takeProfit !== null ? formatPrecioEstable(vista.takeProfit) : "—"} clase="text-tv-green" />
+      <span
+        className="ml-auto shrink-0 whitespace-nowrap text-[10px] text-tv-text-dim"
+        title="Las estadísticas de abajo se calculan solo con operaciones CERRADAS: incluir la abierta falsearía el win rate y el factor de beneficio"
+      >
+        no cuenta en las estadísticas
+      </span>
+    </div>
+  );
+}
+
+function DatoAbierta({ etq, v, clase }: { etq: string; v: string; clase?: string }) {
+  return (
+    <span className="flex shrink-0 items-baseline gap-1 whitespace-nowrap">
+      <span className="text-tv-text-dim">{etq}</span>
+      <span className={cn("font-mono tabular-nums", clase ?? "text-tv-text")}>{v}</span>
+    </span>
   );
 }
 

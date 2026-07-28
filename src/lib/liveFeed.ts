@@ -1,25 +1,24 @@
 "use client";
 
+import { conectarWebSocket } from "@/lib/modelos/transportes/websocket";
+import type { ModelSignal } from "@/lib/modelos/senales";
+
 /**
- * liveFeed.ts — Cliente WebSocket del servicio de paper trading en vivo
- * (servicio_vivo/main.py). Se conecta a `ws://host:port/ws` y entrega cada
- * mensaje "estado" del modelo PPO. Reconecta solo con backoff si el socket cae
- * (p. ej. mientras el servicio termina de cargar TensorFlow al arrancar, o si
- * el replay del split todavía no empezó).
+ * liveFeed.ts — COMPATIBILIDAD. La implementación real vive ahora en
+ * `lib/modelos/transportes/websocket.ts`, junto al resto de los transportes.
  *
- * No conoce React ni el store: es un primitivo reutilizable. Lo cablea
- * `lib/modelos/useModelosIA.ts`, que lo usa para las fuentes del registro con
- * transporte "websocket" y traduce cada mensaje con adaptarFeedWebSocket.
+ * Este archivo se conserva porque era la API pública del cliente WebSocket del
+ * servicio de paper trading (`modelo_PPO/main.py`) y puede estar importado
+ * desde fuera. Delega en el transporte: no hay dos implementaciones.
+ *
+ * Código nuevo: registrá el modelo en `lib/modelos/registro.ts` con
+ * `transporte: "websocket"` y olvidate de este módulo.
  */
 
-export interface EventoVivo {
-  tiempoMs: number;
-  evento: "abrir_long" | "abrir_short" | "cerrar_long" | "cerrar_short";
-  precio: number;
-  motivo?: string;
-  pnlUsd?: number;
-}
+/** @deprecated Usá `ModelSignal` de `lib/modelos/senales.ts`. */
+export type EventoVivo = ModelSignal;
 
+/** Forma del mensaje `tipo: "estado"` del servicio PPO. */
 export interface EstadoVivo {
   tipo: "estado";
   tiempoMs: number;
@@ -39,57 +38,27 @@ export type EstadoConexion = "conectando" | "conectado" | "desconectado" | "fin"
 
 /**
  * Abre la conexión y devuelve una función para cerrarla (limpieza del efecto).
- * `onEstado` recibe cada tick del modelo; `onConexion` (opcional) los cambios
- * de estado de la conexión, para pintar un indicador.
+ *
+ * `onConexion` ya no refleja los estados intermedios del socket: el transporte
+ * no los expone porque ningún componente los usa (la salud del motor se juzga
+ * por la antigüedad del estado, en `derivar.saludMotor`, que es más fiable —
+ * un socket abierto contra un motor colgado igual está muerto). Se sigue
+ * llamando con "fin" cuando el servicio anuncia el final del replay.
  */
 export function conectarFeedVivo(
   url: string,
   onEstado: (e: EstadoVivo) => void,
   onConexion?: (c: EstadoConexion) => void,
 ): () => void {
-  let ws: WebSocket | null = null;
-  let cerrado = false;
-  let reintentoMs = 1000;
-  let timer: ReturnType<typeof setTimeout> | null = null;
-
-  const conectar = () => {
-    if (cerrado) return;
-    onConexion?.("conectando");
-    ws = new WebSocket(url);
-
-    ws.onopen = () => {
-      reintentoMs = 1000;
-      onConexion?.("conectado");
-    };
-    ws.onmessage = (m: MessageEvent) => {
-      let d: { tipo?: string } & Partial<EstadoVivo>;
-      try {
-        d = JSON.parse(String(m.data));
-      } catch {
-        return;
-      }
-      if (d.tipo === "estado") onEstado(d as EstadoVivo);
-      else if (d.tipo === "fin") onConexion?.("fin");
-    };
-    ws.onclose = () => {
-      if (cerrado) return;
-      onConexion?.("desconectado");
-      // backoff exponencial suave hasta 10 s: el servicio puede tardar en
-      // cargar el modelo, o el replay puede reiniciar entre pasadas.
-      timer = setTimeout(conectar, reintentoMs);
-      reintentoMs = Math.min(reintentoMs * 2, 10000);
-    };
-    ws.onerror = () => {
-      // onclose se dispara a continuación y ahí se agenda la reconexión.
-      ws?.close();
-    };
-  };
-
-  conectar();
-
-  return () => {
-    cerrado = true;
-    if (timer) clearTimeout(timer);
-    ws?.close();
-  };
+  return conectarWebSocket({
+    url,
+    msSondeo: 0, // push: no aplica
+    onDatos: (crudo) => {
+      const d = crudo as { tipo?: string } & Partial<EstadoVivo>;
+      if (d?.tipo === "estado") onEstado(d as EstadoVivo);
+      else if (d?.tipo === "fin") onConexion?.("fin");
+    },
+    onAusente: () => {},
+    onAviso: (m) => console.warn(`[feed vivo] ${m}`),
+  });
 }

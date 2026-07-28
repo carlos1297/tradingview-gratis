@@ -40,10 +40,18 @@ export function BottomPanel() {
   const upClass = (n: number) => (n >= 0 ? "text-tv-green" : "text-tv-red");
 
   return (
-    <div className="flex h-9 items-center gap-0 border-t border-tv-border bg-tv-panel px-3 text-xs">
+    // Fila propia del grid (no vive en la región elástica): es el ÚNICO camino
+    // de vuelta cuando el Probador está cerrado, así que no puede comprimirse
+    // ni quedar recortada — con overflow-hidden en la raíz no habría scroll que
+    // la alcance y el botón para reabrir desaparecería sin forma de recuperarlo.
+    <footer
+      data-label="barra-inferior"
+      aria-label="Estado del mercado y controles de paneles"
+      className="flex h-9 shrink-0 items-center gap-0 overflow-x-auto border-t border-tv-border bg-tv-panel px-3 text-xs"
+    >
       <button
         onClick={() => setTradesPanelOpen(!tradesPanelOpen)}
-        title="Registro de operaciones de la IA: rentabilidad, métricas y lista de trades"
+        title="Registro de operaciones de la IA: rentabilidad, métricas y lista de trades (atajo: P)"
         className={
           "mr-1 flex items-center gap-1.5 rounded px-2.5 py-1 text-xs " +
           (tradesPanelOpen
@@ -89,7 +97,7 @@ export function BottomPanel() {
         label="24h Vol (USDT)"
         value={t ? formatVolume(t.quoteVolume) : "—"}
       />
-      <div className="ml-auto flex items-center gap-2">
+      <div data-label="barra-inferior-acciones" className="ml-auto flex items-center gap-2">
         <button
           onClick={toggleWatchlist}
           title={watchlistVisible ? "Ocultar Watchlist" : "Mostrar Watchlist"}
@@ -113,7 +121,7 @@ export function BottomPanel() {
           <span>Binance · Live</span>
         </div>
       </div>
-    </div>
+    </footer>
   );
 }
 
@@ -127,7 +135,11 @@ function Stat({
   valueClass?: string;
 }) {
   return (
-    <div className="flex items-center gap-1.5 border-r border-tv-border px-3">
+    <div
+      data-label="estadistica-mercado"
+      data-metrica={label}
+      className="flex items-center gap-1.5 border-r border-tv-border px-3"
+    >
       <span className="text-tv-text-dim">{label}</span>
       <span className={cn("font-medium tabular-nums", valueClass ?? "text-tv-text")}>
         {value}

@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { getBinanceWS } from "@/lib/binance/ws";
-import { formatPrice } from "@/lib/format";
+import { formatPrecioEstable } from "@/lib/format";
 import { saludMotor, vistaOperacion } from "@/lib/modelos/derivar";
-import { useModelosIA } from "@/lib/modelos/useModelosIA";
+import { fuentePorId } from "@/lib/modelos/registro";
 import type { SaludMotor, SenalOperativa } from "@/lib/modelos/tipos";
+import { useChartStore } from "@/lib/store/chart-store";
 import { useModelosStore } from "@/lib/store/modelos-store";
 import { formatDuracion } from "@/lib/trades";
 import { cn } from "@/lib/utils";
@@ -21,8 +22,12 @@ import { SelectorModelo } from "./SelectorModelo";
  * canónico (lib/modelos/tipos.ts), así que sirve igual para SAC, PPO o el que
  * venga; lo único que cambia es la entrada del registro.
  *
- * Se monta siempre (es quien arranca el sondeo vía useModelosIA) pero no
- * ocupa espacio hasta que algún motor responde: sin modelos corriendo, el
+ * Es SOLO presentación: no abre conexiones ni sondea nada. De eso se encarga
+ * ProveedorModelosIA, montado en la raíz de la página — así ocultar esta barra
+ * (modo inmersivo, un layout futuro) no corta el flujo de datos del que
+ * también vive el gráfico.
+ *
+ * No ocupa espacio hasta que algún motor responde: sin modelos corriendo, el
  * visor se ve exactamente como antes.
  */
 
@@ -41,16 +46,21 @@ const SENAL: Record<SenalOperativa, { texto: string; clase: string }> = {
   CERRAR: { texto: "CERRAR", clase: "bg-tv-yellow/15 text-tv-yellow" },
 };
 
+/**
+ * Los importes y porcentajes del panel llevan SIEMPRE el signo delante, incluso
+ * el "+" del cero. No es un capricho de estilo: si el signo aparece y
+ * desaparece según el valor, el texto cambia de ancho en cada actualización y
+ * el panel tiembla. Con el signo fijo y `tabular-nums`, el número cambia sin
+ * mover nada.
+ */
 function usd(v: number | null, decimales = 2): string | null {
   if (v === null || !Number.isFinite(v)) return null;
-  const signo = v > 0 ? "+" : "";
-  return `${signo}${v.toFixed(decimales)}`;
+  return `${v < 0 ? "−" : "+"}${Math.abs(v).toFixed(decimales)}`;
 }
 
 function pct(v: number | null): string | null {
   if (v === null || !Number.isFinite(v)) return null;
-  const signo = v > 0 ? "+" : "";
-  return `${signo}${v.toFixed(2)}%`;
+  return `${v < 0 ? "−" : "+"}${Math.abs(v).toFixed(2)}%`;
 }
 
 /**
@@ -63,13 +73,14 @@ function legible(v: string | null): string | null {
 }
 
 export function BarraModelosIA() {
-  // arranca el sondeo de todas las fuentes registradas
-  useModelosIA();
-
   const modeloActivo = useModelosStore((s) => s.modeloActivo);
   const estado = useModelosStore((s) =>
     s.modeloActivo ? (s.estados[s.modeloActivo] ?? null) : null,
   );
+  // Par que muestran los gráficos: el modelo NO lo cambia solo (ver
+  // useSincronizarSenales), así que hay que compararlo para poder avisar.
+  const simboloGrafico = useChartStore((s) => s.symbol);
+  const setSymbol = useChartStore((s) => s.setSymbol);
   const [ahora, setAhora] = useState(() => Date.now());
   // El precio se guarda JUNTO a su par: si el modelo cambia de símbolo, el
   // precio viejo deja de coincidir y se descarta solo, sin tener que
@@ -96,10 +107,15 @@ export function BarraModelosIA() {
   }, [simbolo]);
   const precioVivo = tick && tick.simbolo === simbolo ? tick.precio : null;
 
-  // Sin ningún motor corriendo la barra no existe: el visor queda igual que antes.
-  if (!estado || !modeloActivo) return null;
+  // Sin ningún motor corriendo la barra no ocupa nada: el visor queda igual que
+  // antes. Se devuelve un elemento vacío (no null) para no descolocar las filas
+  // del grid de page.tsx — si desapareciera del árbol, la fila elástica del
+  // gráfico le tocaría al panel siguiente.
+  if (!estado || !modeloActivo) return <div data-label="barra-modelos-oculta" aria-hidden />;
 
-  const salud = saludMotor(estado, ahora);
+  // El umbral de frescura lo declara la FUENTE: un motor de barras horarias no
+  // se juzga con la vara de uno de 5 minutos. Sin declaración manda el default.
+  const salud = saludMotor(estado, ahora, fuentePorId(modeloActivo)?.msFresco);
   const cfg = SALUD[salud];
   const vista = vistaOperacion(estado, precioVivo, ahora);
   const senal = SENAL[vista.senal];
@@ -118,8 +134,14 @@ export function BarraModelosIA() {
       aria-label="Monitor de modelos de IA en vivo"
       className="flex w-full shrink-0 items-stretch overflow-x-auto border-b border-tv-border bg-tv-panel"
     >
-      {/* ── Identidad y estado del motor ──────────────────────────────── */}
-      <div className="flex shrink-0 items-center gap-3 px-3 py-2">
+      {/* ── Identidad y estado del motor ──────────────────────────────────
+          sticky: la barra scrollea en horizontal cuando hay muchas métricas, y
+          justo lo primero en salirse era QUÉ modelo es y si está vivo — el dato
+          que da sentido a todos los demás. Anclado a la izquierda, siempre se ve. */}
+      <div
+        data-label="barra-modelos-identidad"
+        className="sticky left-0 z-10 flex shrink-0 items-center gap-3 border-r border-tv-border bg-tv-panel px-3 py-2"
+      >
         <SelectorModelo />
         <span
           className="flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-semibold tracking-wide"
@@ -132,12 +154,26 @@ export function BarraModelosIA() {
           />
           {cfg.texto}
         </span>
+        {/* El modelo puede operar un par distinto del que muestra el gráfico.
+            Cambiarlo automáticamente recargaba las velas en cada tick y en cada
+            cambio de modelo, así que la decisión es del usuario: acá se avisa y
+            se cambia con un clic. Mientras tanto sus marcas y su posición no se
+            dibujan (se filtran por símbolo), que es lo correcto. */}
+        {estado.simbolo !== simboloGrafico && (
+          <button
+            onClick={() => setSymbol(estado.simbolo)}
+            title={`${estado.modeloEtiqueta} opera ${estado.simbolo} y el gráfico muestra ${simboloGrafico}: sus operaciones no se dibujan acá. Clic para ver ${estado.simbolo}.`}
+            className="flex items-center gap-1 rounded border border-tv-yellow/40 px-2 py-1 text-[11px] font-semibold text-tv-yellow hover:bg-tv-yellow/10"
+          >
+            opera {estado.simbolo} · ver
+          </button>
+        )}
       </div>
 
       <DivisorCelda />
 
       {/* ── Posición y señal ──────────────────────────────────────────── */}
-      <div className="flex shrink-0 items-center gap-2 px-3">
+      <div data-label="barra-modelos-posicion" className="flex shrink-0 items-center gap-2 px-3">
         <span
           className={cn(
             "rounded px-2.5 py-1 text-xs font-bold tracking-wide",
@@ -159,12 +195,12 @@ export function BarraModelosIA() {
       {/* ── Operación en curso ────────────────────────────────────────── */}
       <CeldaMetrica
         etiqueta="Entrada"
-        valor={vista.precioEntrada !== null ? formatPrice(vista.precioEntrada) : null}
+        valor={vista.precioEntrada !== null ? formatPrecioEstable(vista.precioEntrada) : null}
         titulo="Precio al que el modelo abrió la posición (incluye slippage)"
       />
       <CeldaMetrica
         etiqueta="Precio actual"
-        valor={vista.precioActual !== null ? formatPrice(vista.precioActual) : null}
+        valor={vista.precioActual !== null ? formatPrecioEstable(vista.precioActual) : null}
         secundario={
           !estado.enVivo ? "replay" : precioVivo !== null ? "en vivo" : null
         }
@@ -206,14 +242,14 @@ export function BarraModelosIA() {
       {/* ── Barreras de riesgo ────────────────────────────────────────── */}
       <CeldaMetrica
         etiqueta="Stop loss"
-        valor={vista.stopLoss !== null ? formatPrice(vista.stopLoss) : null}
+        valor={vista.stopLoss !== null ? formatPrecioEstable(vista.stopLoss) : null}
         secundario={vista.distanciaStopPct !== null ? pct(vista.distanciaStopPct) : null}
         tono="negativo"
         titulo="Precio del stop y distancia que falta hasta tocarlo"
       />
       <CeldaMetrica
         etiqueta="Take profit"
-        valor={vista.takeProfit !== null ? formatPrice(vista.takeProfit) : null}
+        valor={vista.takeProfit !== null ? formatPrecioEstable(vista.takeProfit) : null}
         secundario={vista.distanciaTakePct !== null ? pct(vista.distanciaTakePct) : null}
         tono="positivo"
         titulo="Precio del objetivo y distancia que falta hasta tocarlo"
@@ -221,7 +257,7 @@ export function BarraModelosIA() {
       <CeldaMetrica
         etiqueta="Liquidación"
         valor={
-          estado.precioLiquidacion !== null ? formatPrice(estado.precioLiquidacion) : null
+          estado.precioLiquidacion !== null ? formatPrecioEstable(estado.precioLiquidacion) : null
         }
         secundario={
           vista.distanciaLiquidacionPct !== null
@@ -280,7 +316,7 @@ export function BarraModelosIA() {
       />
 
       {/* ── Avisos ────────────────────────────────────────────────────── */}
-      <div className="ml-auto flex shrink-0 items-center gap-2 px-3">
+      <div data-label="barra-modelos-avisos" className="ml-auto flex shrink-0 items-center gap-2 px-3">
         {salud === "error" && estado.mensaje && (
           <span className="max-w-[280px] truncate rounded bg-tv-red/15 px-2 py-1 text-[11px] text-tv-red">
             {estado.mensaje}
