@@ -46,6 +46,21 @@ export function ema(candles: Candle[], period: number): IndicatorPoint[] {
 }
 
 /**
+ * Valor del RSI a partir de la ganancia y la pérdida medias de Wilder.
+ *
+ * El caso `loss === 0` hay que tratarlo aparte porque `gain / loss` es
+ * infinito. Antes se sustituía por `rs = 100`, y eso daba 99.01 en los DOS
+ * extremos: una serie que solo sube (debe dar 100) y —peor— una serie
+ * completamente plana, sin una sola variación, que aparecía como 99 «sobre-
+ * comprada» cuando el mercado no se movió nada. Con `gain === 0` no hay
+ * fuerza en ninguna dirección: lo neutro es 50.
+ */
+function valorRSI(gain: number, loss: number): number {
+  if (loss === 0) return gain === 0 ? 50 : 100;
+  return 100 - 100 / (1 + gain / loss);
+}
+
+/**
  * RSI (Wilder) — period typically 14.
  */
 export function rsi(candles: Candle[], period = 14): IndicatorPoint[] {
@@ -60,16 +75,14 @@ export function rsi(candles: Candle[], period = 14): IndicatorPoint[] {
   }
   gain /= period;
   loss /= period;
-  let rs = loss === 0 ? 100 : gain / loss;
-  out.push({ time: candles[period].time, value: 100 - 100 / (1 + rs) });
+  out.push({ time: candles[period].time, value: valorRSI(gain, loss) });
   for (let i = period + 1; i < candles.length; i++) {
     const diff = candles[i].close - candles[i - 1].close;
     const g = diff > 0 ? diff : 0;
     const l = diff < 0 ? -diff : 0;
     gain = (gain * (period - 1) + g) / period;
     loss = (loss * (period - 1) + l) / period;
-    rs = loss === 0 ? 100 : gain / loss;
-    out.push({ time: candles[i].time, value: 100 - 100 / (1 + rs) });
+    out.push({ time: candles[i].time, value: valorRSI(gain, loss) });
   }
   return out;
 }

@@ -3,8 +3,21 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Timeframe } from "@/lib/binance/types";
+import {
+  MINUTOS_POR_TEMPORALIDAD,
+  ms_queAbarca,
+  temporalidadParaPeriodo,
+} from "@/lib/binance/temporalidades";
+import { HERRAMIENTA_POR_DEFECTO } from "@/lib/herramientas/registro";
 import { NIVELES_APALANCAMIENTO } from "@/lib/indicators/liquidations";
-import type { ModelSignalsFile } from "@/lib/modelos/senales";
+import type { ModelSignalsFile } from "@/lib/modelos/nucleo/senales";
+import {
+  aislar,
+  alternarCapa,
+  alternarVisible,
+  VISIBILIDAD_POR_DEFECTO,
+  type VisibilidadModelo,
+} from "@/lib/modelos/nucleo/visibilidad";
 
 /**
  * Overlays propios superpuestos al chart (los indicadores clásicos viven en
@@ -106,11 +119,11 @@ const FOOTPRINT_CONFIG_DEFAULT: FootprintConfig = {
 
 /**
  * Las señales de trading son del DOMINIO, no de la interfaz: viven en
- * `lib/modelos/senales.ts` y las usan por igual el contrato de los modelos,
+ * `lib/modelos/nucleo/senales.ts` y las usan por igual el contrato de los modelos,
  * el cálculo de operaciones y este store. Se re-exportan acá para que los
  * imports existentes (`from "@/lib/store/chart-store"`) sigan funcionando.
  */
-export type { ModelSignal, ModelSignalsFile } from "@/lib/modelos/senales";
+export type { ModelSignal, ModelSignalsFile } from "@/lib/modelos/nucleo/senales";
 
 export const DEFAULT_WATCHLIST = [
   "BTCUSDT",
@@ -152,6 +165,20 @@ function tfSugerido(usados: Timeframe[]): Timeframe {
   return PRESET_VENTANAS.find((t) => !usados.includes(t)) ?? "1h";
 }
 
+/**
+ * ¿Es una temporalidad que el visor sabe manejar?
+ *
+ * El estado persistido viene de `localStorage`, o sea de una versión ANTERIOR
+ * del producto. Si mañana se renombra o se retira una temporalidad, todos los
+ * usuarios existentes seguirían arrastrando la vieja: `MINUTOS_POR_TEMPORALIDAD`
+ * devuelve `undefined`, el paso de vela sale `NaN` y a partir de ahí los
+ * marcadores no se dibujan, el Order Flow no agrupa y Binance rechaza el
+ * `interval`. Todo en silencio, sin un error visible.
+ */
+function esTemporalidadValida(v: unknown): v is Timeframe {
+  return typeof v === "string" && v in MINUTOS_POR_TEMPORALIDAD;
+}
+
 interface ChartState {
   symbol: string;
   /** Ventanas de timeframe del mosaico (drag & drop, redimensionables) */
@@ -180,6 +207,27 @@ interface ChartState {
   modelSignals: ModelSignalsFile | null;
   /** Show/hide the loaded signals without discarding them */
   showModelSignals: boolean;
+  /**
+   * Herramienta de dibujo activa (id del registro de `lib/herramientas`).
+   *
+   * Es GLOBAL, como `indicadoresActivos`: la barra lateral es una sola y
+   * gobierna todas las ventanas del mosaico. El trazo en curso, en cambio, es
+   * de cada ventana y vive en un ref dentro de `ChartLigero` — no en el store,
+   * porque cambia con cada movimiento del cursor y re-renderizaría el gráfico
+   * entero decenas de veces por segundo.
+   *
+   * Efímera a propósito: no se persiste. Arrancar una sesión con la regla
+   * activada sin haberla pedido se siente como un gráfico que no responde.
+   */
+  herramientaActiva: string;
+  /**
+   * Qué dibuja cada modelo sobre el gráfico, por id.
+   *
+   * Persiste: es una preferencia de visualización, y volver a abrir el visor
+   * con las capas que dejaste puestas es lo esperable. Los modelos que nunca
+   * se tocaron no tienen entrada — `visibilidadDe()` aplica los defaults.
+   */
+  visibilidadModelos: Record<string, VisibilidadModelo>;
   /** Strategy Tester bottom panel (registro de operaciones de la IA) */
   tradesPanelOpen: boolean;
   /** Operación abierta de ejemplo dibujada sobre el gráfico (demo, efímera) */
@@ -190,6 +238,11 @@ interface ChartState {
   agregarVentana: (tf?: Timeframe) => void;
   quitarVentana: (id: string) => void;
   setVentanaTimeframe: (id: string, tf: Timeframe) => void;
+  /**
+   * Sube la temporalidad de las ventanas que NO alcanzan a mostrar un período
+   * de `duracionMs`. Lo llama la carga de señales de un backtest.
+   */
+  ajustarTemporalidadesAlPeriodo: (duracionMs: number) => void;
   setNumeroVentanas: (n: number) => void;
   intercambiarVentanas: (idA: string, idB: string) => void;
   toggleMaximizarVentana: (id: string) => void;
@@ -214,6 +267,18 @@ interface ChartState {
   toggleShowModelSignals: () => void;
   setTradesPanelOpen: (v: boolean) => void;
   setPosicionDemo: (p: { lado: "long" | "short" } | null) => void;
+  setHerramientaActiva: (id: string) => void;
+  /** Enciende/apaga TODO lo de un modelo, conservando sus capas. */
+  alternarModeloVisible: (id: string) => void;
+  /** Enciende/apaga UNA capa (entradas, salidas, posición, SL/TP). */
+  alternarCapaModelo: (
+    id: string,
+    capa: keyof Omit<VisibilidadModelo, "visible">,
+  ) => void;
+  /** Deja visible solo este modelo; repetirlo vuelve a mostrarlos todos. */
+  aislarModelo: (id: string, ids: readonly string[]) => void;
+  /** Vuelve todos los modelos a la visibilidad de fábrica. */
+  mostrarTodosLosModelos: (ids: readonly string[]) => void;
 }
 
 export const useChartStore = create<ChartState>()(
@@ -240,6 +305,8 @@ export const useChartStore = create<ChartState>()(
       showModelSignals: true,
       tradesPanelOpen: false,
       posicionDemo: null,
+      herramientaActiva: HERRAMIENTA_POR_DEFECTO,
+      visibilidadModelos: {},
 
       setSymbol: (symbol) => set({ symbol }),
       agregarVentana: (tf) =>
@@ -269,6 +336,22 @@ export const useChartStore = create<ChartState>()(
             v.id === id ? { ...v, timeframe: tf } : v,
           ),
         })),
+      // Solo toca las ventanas que se quedan cortas: una ventana ya puesta en
+      // 1d muestra el backtest entero y no hay razón para moverla. Así cargar
+      // señales no arrasa con un mosaico que el usuario armó a mano.
+      ajustarTemporalidadesAlPeriodo: (duracionMs) =>
+        set((s) => {
+          const suficiente = temporalidadParaPeriodo(duracionMs);
+          const ventanasTF = s.ventanasTF.map((v) =>
+            ms_queAbarca(v.timeframe) >= duracionMs
+              ? v
+              : { ...v, timeframe: suficiente },
+          );
+          // misma referencia si nada cambió: no dispara re-render ni refetch
+          return ventanasTF.some((v, i) => v !== s.ventanasTF[i])
+            ? { ventanasTF }
+            : s;
+        }),
       setNumeroVentanas: (n) =>
         set((s) => {
           const objetivo = Math.max(1, Math.min(MAX_VENTANAS, n));
@@ -353,6 +436,19 @@ export const useChartStore = create<ChartState>()(
         set((s) => ({ showModelSignals: !s.showModelSignals })),
       setTradesPanelOpen: (tradesPanelOpen) => set({ tradesPanelOpen }),
       setPosicionDemo: (posicionDemo) => set({ posicionDemo }),
+      setHerramientaActiva: (herramientaActiva) => set({ herramientaActiva }),
+      alternarModeloVisible: (id) =>
+        set((s) => ({ visibilidadModelos: alternarVisible(s.visibilidadModelos, id) })),
+      alternarCapaModelo: (id, capa) =>
+        set((s) => ({ visibilidadModelos: alternarCapa(s.visibilidadModelos, id, capa) })),
+      aislarModelo: (id, ids) =>
+        set((s) => ({ visibilidadModelos: aislar(s.visibilidadModelos, ids, id) })),
+      mostrarTodosLosModelos: (ids) =>
+        set((s) => {
+          const mapa = { ...s.visibilidadModelos };
+          for (const id of ids) mapa[id] = { ...VISIBILIDAD_POR_DEFECTO };
+          return { visibilidadModelos: mapa };
+        }),
     }),
     {
       name: "tv-gratis-chart-state",
@@ -371,8 +467,29 @@ export const useChartStore = create<ChartState>()(
           }
           if (Array.isArray(est.ventanasTF)) {
             est.ventanasTF = (
-              est.ventanasTF as Array<{ id?: string; timeframe: Timeframe }>
-            ).map((v) => ({ id: v.id ?? crearId(), timeframe: v.timeframe }));
+              est.ventanasTF as Array<{ id?: unknown; timeframe?: unknown }>
+            )
+              // Descartar lo que el visor de HOY no sabe dibujar. Vale más
+              // perder una ventana que arrastrar un `NaN` por todo el gráfico.
+              .filter((v) => v && esTemporalidadValida(v.timeframe))
+              .map((v) => ({
+                id: typeof v.id === "string" && v.id ? v.id : crearId(),
+                timeframe: v.timeframe as Timeframe,
+              }));
+          }
+          // Un mosaico vacío deja la pantalla en negro sin explicación. Si la
+          // validación se llevó todo (o el estado venía corrupto), se vuelve al
+          // arranque de fábrica: una sola ventana.
+          if (!Array.isArray(est.ventanasTF) || est.ventanasTF.length === 0) {
+            est.ventanasTF = [{ id: crearId(), timeframe: "15m" }];
+          }
+          if (typeof est.symbol !== "string" || !est.symbol.trim()) {
+            est.symbol = "BTCUSDT";
+          }
+          if (Array.isArray(est.watchlist)) {
+            est.watchlist = (est.watchlist as unknown[]).filter(
+              (s): s is string => typeof s === "string" && s.trim().length > 0,
+            );
           }
         }
         return est as unknown as ChartState;
@@ -387,6 +504,7 @@ export const useChartStore = create<ChartState>()(
         indicadoresActivos: s.indicadoresActivos,
         watchlist: s.watchlist,
         watchlistVisible: s.watchlistVisible,
+        visibilidadModelos: s.visibilidadModelos,
       }),
     },
   ),

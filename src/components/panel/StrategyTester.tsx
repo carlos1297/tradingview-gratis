@@ -3,11 +3,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, FlaskConical, Play, TrendingUp, X } from "lucide-react";
 import { formatPrecioEstable } from "@/lib/format";
-import { vistaOperacion } from "@/lib/modelos/derivar";
-import { useModeloActivo } from "@/lib/store/modelos-store";
+import { vistaOperacion } from "@/lib/modelos/nucleo/derivar";
+import { usePrecioMercado } from "@/lib/modelos/nucleo/usePrecioMercado";
+import { fuentePorId } from "@/lib/modelos/registro";
+import {
+  useModeloActivo,
+  useModelosDisponibles,
+  useModelosStore,
+} from "@/lib/store/modelos-store";
 import { useChartStore } from "@/lib/store/chart-store";
 import {
   buildOperaciones,
+  computeMetricasGrupo,
   computeResumenTV,
   etiquetaMotivo,
   formatDuracion,
@@ -27,7 +34,7 @@ import { cn } from "@/lib/utils";
 const VERDE = "#26a69a";
 const ROJO = "#ef5350";
 
-type Pestana = "resumen" | "rendimiento" | "operaciones";
+type Pestana = "resumen" | "rendimiento" | "operaciones" | "comparar";
 
 function formatUsd(v: number): string {
   const signo = v > 0 ? "+" : "";
@@ -60,6 +67,11 @@ export function StrategyTester() {
   // Posición abierta del modelo activo: el mismo estado del que sale la barra
   // de modelos y el dibujo del gráfico, así los tres coinciden siempre.
   const estadoModelo = useModeloActivo();
+  // Precio de mercado compartido con la barra de modelos y con la caja de la
+  // operación en el gráfico. Antes acá se usaba `estadoModelo.precio` —el que
+  // publica el motor, que decide una vez cada 5 minutos— así que el PnL de
+  // esta franja no coincidía con el de los otros dos paneles.
+  const precioVivo = usePrecioMercado(estadoModelo?.simbolo);
   // reloj de 1 s: hace avanzar la duración de la operación en curso sin
   // depender de que el motor publique (decide cada 5 minutos)
   const [ahora, setAhora] = useState(() => Date.now());
@@ -69,8 +81,8 @@ export function StrategyTester() {
   }, []);
   const abierta = useMemo(() => {
     if (!estadoModelo || estadoModelo.posicion === "FLAT") return null;
-    return vistaOperacion(estadoModelo, estadoModelo.precio, ahora);
-  }, [estadoModelo, ahora]);
+    return vistaOperacion(estadoModelo, precioVivo, ahora);
+  }, [estadoModelo, precioVivo, ahora]);
 
   // al cargar señales reales, sacar la operación de demo del gráfico
   useEffect(() => {
@@ -165,6 +177,9 @@ export function StrategyTester() {
         >
           Rendimiento
         </TabBtn>
+        <TabBtn activa={pestana === "comparar"} onClick={() => setPestana("comparar")}>
+          Comparar modelos
+        </TabBtn>
         <TabBtn
           activa={pestana === "operaciones"}
           onClick={() => setPestana("operaciones")}
@@ -218,16 +233,30 @@ export function StrategyTester() {
         <FranjaAbierta vista={abierta} modelo={estadoModelo.modeloEtiqueta} />
       )}
 
+      {/* Sin NINGÚN dato (ni cerradas ni abierta) el panel no tiene pestañas
+          que mostrar: se explica qué falta y se ofrece la demo.
+
+          Con datos, la pestaña elegida SIEMPRE manda. Antes, cuando había una
+          operación abierta pero ningún cierre, este bloque cortaba acá y
+          devolvía el aviso para las tres pestañas: los botones marcaban el
+          subrayado azul y abajo no cambiaba nada, así que «Resumen» parecía
+          roto y el panel se quedaba clavado en la franja de la operación
+          abierta. El aviso ahora es una tira dentro de cada pestaña. */}
       {!hayDatos ? (
         <EstadoVacio onDemo={() => setDemo(true)} />
-      ) : !hayCerradas ? (
-        <SinCerradas modelo={estadoModelo?.modeloEtiqueta ?? null} />
-      ) : pestana === "resumen" ? (
-        <Resumen operaciones={operaciones} m={resumen.todas} />
-      ) : pestana === "rendimiento" ? (
-        <Rendimiento resumen={resumen} />
       ) : (
-        <ListaOperaciones operaciones={operaciones} />
+        <div className="flex min-h-0 flex-1 flex-col">
+          {!hayCerradas && <SinCerradas modelo={estadoModelo?.modeloEtiqueta ?? null} />}
+          {pestana === "resumen" ? (
+            <Resumen operaciones={operaciones} m={resumen.todas} />
+          ) : pestana === "comparar" ? (
+            <CompararModelos />
+          ) : pestana === "rendimiento" ? (
+            <Rendimiento resumen={resumen} />
+          ) : (
+            <ListaOperaciones operaciones={operaciones} />
+          )}
+        </div>
       )}
     </section>
   );
@@ -284,18 +313,19 @@ function EstadoVacio({ onDemo }: { onDemo: () => void }) {
 
 /**
  * Hay una posición abierta pero ningún cierre todavía: no se puede calcular
- * nada (win rate, profit factor…) porque no hay resultados. Se explica en vez
- * de mostrar tablas vacías o, peor, el mensaje de "conectá el feed".
+ * nada (win rate, profit factor…) porque no hay resultados.
+ *
+ * Es una TIRA, no una pantalla: va arriba del contenido de la pestaña elegida,
+ * que se sigue mostrando (con las métricas en "—"). Cuando ocupaba todo el
+ * cuerpo, las tres pestañas mostraban lo mismo y el panel parecía trabado.
  */
 function SinCerradas({ modelo }: { modelo: string | null }) {
   return (
-    <div className="flex min-h-0 flex-1 items-center justify-center px-4 text-center">
-      <div className="max-w-xl text-xs text-tv-text-muted">
-        {modelo ?? "El modelo"} tiene una operación <strong>en curso</strong> y
-        todavía ningún cierre. Las métricas (rentabilidad, factor de beneficio,
-        drawdown) aparecen en cuanto cierre la primera: se calculan solo sobre
-        operaciones terminadas, porque el resultado de la abierta aún no existe.
-      </div>
+    <div className="shrink-0 border-b border-tv-border bg-tv-bg/40 px-4 py-2 text-[11px] text-tv-text-muted">
+      {modelo ?? "El modelo"} tiene una operación <strong>en curso</strong> y
+      todavía ningún cierre, así que las métricas aparecen en «—»: rentabilidad,
+      factor de beneficio y drawdown se calculan solo sobre operaciones
+      terminadas, y el resultado de la abierta aún no existe.
     </div>
   );
 }
@@ -376,51 +406,64 @@ function Resumen({
   operaciones: OperacionIA[];
   m: MetricasGrupo;
 }) {
+  // Sin cierres no hay nada que promediar: un "+0.00 USD" o un factor de
+  // beneficio "∞" se leerían como resultados reales. Mismo criterio que la
+  // tabla de Rendimiento, que ya mostraba "—" con cero operaciones.
+  const vacio = m.totalTrades === 0;
+  const v = (texto: string) => (vacio ? "—" : texto);
+  const c = (clase: string) => (vacio ? "text-tv-text-dim" : clase);
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 overflow-x-auto border-b border-tv-border">
         <Tarjeta
           etiqueta="Beneficio neto"
-          valor={formatUsd(m.netProfit)}
-          clase={claseSigno(m.netProfit)}
+          valor={v(formatUsd(m.netProfit))}
+          clase={c(claseSigno(m.netProfit))}
         />
         <Tarjeta
           etiqueta="Operaciones cerradas"
           valor={String(m.totalTrades)}
-          sub={`${m.winning} gan · ${m.losing} perd`}
+          sub={vacio ? undefined : `${m.winning} gan · ${m.losing} perd`}
         />
         <Tarjeta
           etiqueta="Porcentaje rentable"
-          valor={`${m.percentProfitable.toFixed(2)} %`}
-          clase={m.percentProfitable >= 50 ? "text-tv-green" : "text-tv-red"}
-          sub={`${m.winning} de ${m.totalTrades}`}
+          valor={v(`${m.percentProfitable.toFixed(2)} %`)}
+          clase={c(m.percentProfitable >= 50 ? "text-tv-green" : "text-tv-red")}
+          sub={vacio ? undefined : `${m.winning} de ${m.totalTrades}`}
         />
         <Tarjeta
           etiqueta="Factor de beneficio"
-          valor={m.profitFactor === null ? "∞" : m.profitFactor.toFixed(3)}
-          clase={
+          valor={v(m.profitFactor === null ? "∞" : m.profitFactor.toFixed(3))}
+          clase={c(
             m.profitFactor === null || m.profitFactor >= 1
               ? "text-tv-green"
-              : "text-tv-red"
-          }
+              : "text-tv-red",
+          )}
         />
         <Tarjeta
           etiqueta="Máx. drawdown"
-          valor={formatUsd(-m.maxDrawdown)}
-          clase="text-tv-red"
+          valor={v(formatUsd(-m.maxDrawdown))}
+          clase={c("text-tv-red")}
         />
         <Tarjeta
           etiqueta="Operación promedio"
-          valor={formatUsd(m.avgTrade)}
-          clase={claseSigno(m.avgTrade)}
+          valor={v(formatUsd(m.avgTrade))}
+          clase={c(claseSigno(m.avgTrade))}
         />
         <Tarjeta
           etiqueta="Duración media"
-          valor={formatDuracion(m.avgDuracionMs)}
+          valor={v(formatDuracion(m.avgDuracionMs))}
           ultima
         />
       </div>
-      <CurvaBeneficio operaciones={operaciones} />
+      {vacio ? (
+        <div className="flex min-h-0 flex-1 items-center justify-center px-4 text-center text-[11px] text-tv-text-dim">
+          La curva de equity se dibuja con las operaciones cerradas: todavía no
+          hay ninguna.
+        </div>
+      ) : (
+        <CurvaBeneficio operaciones={operaciones} />
+      )}
     </div>
   );
 }
@@ -620,7 +663,129 @@ const FILAS: Array<{ etq: string; celda: (m: MetricasGrupo) => Celda }> = [
   { etq: "Mayor operación ganadora", celda: (m) => ({ txt: formatUsd(m.largestWin), clase: "text-tv-green" }) },
   { etq: "Mayor operación perdedora", celda: (m) => ({ txt: usdNeg(m.largestLoss), clase: "text-tv-red" }) },
   { etq: "Duración media", celda: (m) => ({ txt: formatDuracion(m.avgDuracionMs), clase: NEUTRO }) },
+  {
+    // Resultado ajustado por riesgo: es lo que permite comparar dos modelos
+    // sin premiar al más temerario. Ver `MetricasGrupo.sharpe`.
+    etq: "Sharpe (por operación)",
+    celda: (m) => ({
+      txt: m.sharpe === null ? "—" : m.sharpe.toFixed(3),
+      clase: m.sharpe === null ? NEUTRO : m.sharpe >= 0 ? "text-tv-green" : "text-tv-red",
+    }),
+  },
 ];
+
+
+// ── Comparar modelos: una fila por motor, mismas métricas ──────────────────
+
+/**
+ * Rendimiento de TODOS los modelos, lado a lado.
+ *
+ * Las estadísticas de las otras pestañas son del modelo ACTIVO a propósito
+ * (mezclar dos motores daría un win rate sin significado). Pero la pregunta
+ * "¿cuál va mejor?" necesita verlos juntos, y eso es lo que hace esta tabla:
+ * cada fila se calcula por separado, con las mismas funciones puras, así los
+ * números coinciden exactamente con los que muestra cada modelo por su cuenta.
+ */
+function CompararModelos() {
+  const modelos = useModelosDisponibles();
+  const modeloActivo = useModelosStore((s) => s.modeloActivo);
+  const setModeloActivo = useModelosStore((s) => s.setModeloActivo);
+
+  const filas = useMemo(
+    () =>
+      modelos.map((e) => ({
+        id: e.modeloId,
+        etiqueta: e.modeloEtiqueta,
+        color: fuentePorId(e.modeloId)?.color ?? "#787b86",
+        simbolo: e.simbolo,
+        m: computeMetricasGrupo(buildOperaciones(e.senales)),
+      })),
+    [modelos],
+  );
+
+  if (filas.length === 0) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center px-4 text-center text-xs text-tv-text-muted">
+        Ningún modelo publicando. Arrancá al menos dos motores para poder
+        compararlos.
+      </div>
+    );
+  }
+
+  const col = "px-3 py-2 text-right font-medium";
+  return (
+    <div className="min-h-0 flex-1 overflow-auto">
+      <table className="w-full border-collapse text-[11px] tabular-nums">
+        <thead className="sticky top-0 z-10 bg-tv-panel">
+          <tr className="border-b border-tv-border text-[10px] uppercase tracking-wide text-tv-text-dim">
+            <th className="px-3 py-2 text-left font-medium">Modelo</th>
+            <th className={col}>Beneficio neto</th>
+            <th className={col}>Cerradas</th>
+            <th className={col}>% rentable</th>
+            <th className={col}>Factor</th>
+            <th className={col}>Sharpe</th>
+            <th className={col}>Máx. DD</th>
+            <th className={col}>Operación prom.</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filas.map((f, i) => {
+            const vacio = f.m.totalTrades === 0;
+            const v = (t: string) => (vacio ? "—" : t);
+            return (
+              <tr
+                key={f.id}
+                onClick={() => setModeloActivo(f.id)}
+                title={`Analizar ${f.etiqueta} en las demás pestañas`}
+                className={cn(
+                  "cursor-pointer border-b border-tv-border/40 hover:bg-tv-panel-hover",
+                  i % 2 === 1 && "bg-tv-bg/30",
+                  modeloActivo === f.id && "bg-tv-blue/10",
+                )}
+              >
+                <td className="px-3 py-2">
+                  <span className="flex items-center gap-2">
+                    {/* mismo color con el que se dibuja en el gráfico */}
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                      style={{ background: f.color }}
+                      aria-hidden
+                    />
+                    <span className="font-semibold text-tv-text">{f.etiqueta}</span>
+                    <span className="text-[10px] text-tv-text-dim">{f.simbolo}</span>
+                  </span>
+                </td>
+                <td className={cn(col, vacio ? "text-tv-text-dim" : claseSigno(f.m.netProfit))}>
+                  {v(formatUsd(f.m.netProfit))}
+                </td>
+                <td className={cn(col, "text-tv-text-muted")}>{f.m.totalTrades}</td>
+                <td className={cn(col, vacio ? "text-tv-text-dim" : f.m.percentProfitable >= 50 ? "text-tv-green" : "text-tv-red")}>
+                  {v(`${f.m.percentProfitable.toFixed(2)} %`)}
+                </td>
+                <td className={cn(col, "text-tv-text")}>
+                  {v(f.m.profitFactor === null ? "∞" : f.m.profitFactor.toFixed(3))}
+                </td>
+                <td className={cn(col, f.m.sharpe === null ? "text-tv-text-dim" : f.m.sharpe >= 0 ? "text-tv-green" : "text-tv-red")}>
+                  {f.m.sharpe === null ? "—" : f.m.sharpe.toFixed(3)}
+                </td>
+                <td className={cn(col, vacio ? "text-tv-text-dim" : "text-tv-red")}>
+                  {v(formatUsd(-f.m.maxDrawdown))}
+                </td>
+                <td className={cn(col, vacio ? "text-tv-text-dim" : claseSigno(f.m.avgTrade))}>
+                  {v(formatUsd(f.m.avgTrade))}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <p className="px-3 py-2 text-[10px] text-tv-text-dim">
+        Clic en una fila para analizar ese modelo en las demás pestañas. Las
+        métricas se calculan solo sobre operaciones CERRADAS de cada motor.
+      </p>
+    </div>
+  );
+}
 
 function Rendimiento({
   resumen,
@@ -698,6 +863,13 @@ function ListaOperaciones({ operaciones }: { operaciones: OperacionIA[] }) {
           </tr>
         </thead>
         <tbody>
+          {operaciones.length === 0 && (
+            <tr>
+              <td colSpan={10} className="px-3 py-6 text-center text-tv-text-dim">
+                Ninguna operación cerrada todavía.
+              </td>
+            </tr>
+          )}
           {operaciones.map((op) => (
             <tr
               key={op.indice}

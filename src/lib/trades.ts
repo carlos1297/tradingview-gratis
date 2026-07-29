@@ -1,11 +1,11 @@
-import { esApertura, type ModelSignal } from "@/lib/modelos/senales";
+import { esApertura, type ModelSignal } from "@/lib/modelos/nucleo/senales";
 
 /**
  * Reconstructs the AI's closed trades and profitability stats from the
  * senales.json events — powers the Strategy Tester panel.
  *
  * Módulo PURO: no toca React ni ningún store. Lo consumen el Probador de
- * estrategias y `lib/modelos/derivar.ts`, de modo que el PnL realizado del
+ * estrategias y `lib/modelos/nucleo/derivar.ts`, de modo que el PnL realizado del
  * panel y el de la lista de operaciones no pueden diferir nunca.
  */
 
@@ -137,6 +137,26 @@ export interface MetricasGrupo {
   largestWin: number;
   largestLoss: number; // valor absoluto
   avgDuracionMs: number;
+  /**
+   * Sharpe por operación: retorno medio ÷ desvío estándar de los retornos.
+   *
+   * Mide el resultado AJUSTADO POR RIESGO, que es lo que permite comparar dos
+   * modelos con honestidad: uno que gana 100 USD con oscilaciones enormes no es
+   * mejor que otro que gana 80 de forma pareja. Sin esto, la comparación entre
+   * modelos se reduce al beneficio neto y premia al más temerario.
+   *
+   * Se calcula sobre el PnL **porcentual** de cada operación, no sobre el
+   * importe: así no depende del tamaño de posición de cada motor y dos modelos
+   * con capitales distintos siguen siendo comparables.
+   *
+   * `null` con menos de dos operaciones (no hay dispersión que medir) o si
+   * todas rindieron exactamente lo mismo (desvío cero).
+   *
+   * Ojo: es Sharpe POR OPERACIÓN, sin anualizar y sin tasa libre de riesgo —
+   * anualizarlo exigiría asumir una frecuencia de trading que cada motor
+   * decide por su cuenta.
+   */
+  sharpe: number | null;
 }
 
 export function computeMetricasGrupo(ops: OperacionIA[]): MetricasGrupo {
@@ -195,7 +215,25 @@ export function computeMetricasGrupo(ops: OperacionIA[]): MetricasGrupo {
     largestWin,
     largestLoss,
     avgDuracionMs: n > 0 ? sumDur / n : 0,
+    sharpe: sharpePorOperacion(ops),
   };
+}
+
+/**
+ * Sharpe por operación sobre el PnL porcentual. Ver `MetricasGrupo.sharpe`.
+ *
+ * Desvío POBLACIONAL (÷ n, no ÷ n−1): no se está estimando el riesgo de una
+ * población mayor a partir de una muestra, se está describiendo la corrida que
+ * de verdad ocurrió.
+ */
+export function sharpePorOperacion(ops: OperacionIA[]): number | null {
+  if (ops.length < 2) return null;
+  const r = ops.map((o) => o.pnlPct);
+  const media = r.reduce((a, b) => a + b, 0) / r.length;
+  const varianza = r.reduce((a, b) => a + (b - media) ** 2, 0) / r.length;
+  const desvio = Math.sqrt(varianza);
+  if (desvio === 0) return null; // todas rindieron igual: no hay riesgo que medir
+  return media / desvio;
 }
 
 /** Métricas separadas por lado, como el resumen de rendimiento de TradingView. */

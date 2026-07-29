@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Bot, Eye, EyeOff, X } from "lucide-react";
+import { ArrowLeftRight, Bot, Eye, EyeOff, X } from "lucide-react";
 import {
   useChartStore,
   type ModelSignalsFile,
 } from "@/lib/store/chart-store";
 import { useModelosStore } from "@/lib/store/modelos-store";
-import { sanearSenales } from "@/lib/modelos/senales";
+import { fuentePorId } from "@/lib/modelos/registro";
+import { sanearSenales } from "@/lib/modelos/nucleo/senales";
 
 /**
  * Loads the senales.json exported by `evaluar.py --guardar-curva` (RL model
@@ -26,6 +27,12 @@ export function ModelSignals() {
   const setModelSignals = useChartStore((s) => s.setModelSignals);
   const toggleShow = useChartStore((s) => s.toggleShowModelSignals);
   const setSymbol = useChartStore((s) => s.setSymbol);
+  const activo = useModelosStore((s) => s.modeloActivo);
+  const disponibles = useModelosStore((s) => s.disponibles);
+  const setModeloActivo = useModelosStore((s) => s.setModeloActivo);
+  const ajustarTemporalidadesAlPeriodo = useChartStore(
+    (s) => s.ajustarTemporalidadesAlPeriodo,
+  );
 
   function aplicarSenales(parsed: ModelSignalsFile) {
     if (!Array.isArray(parsed.senales)) {
@@ -42,9 +49,27 @@ export function ModelSignals() {
     if (descartadas > 0) {
       console.warn(`[senales] ${descartadas} señal(es) inválida(s) descartada(s)`);
     }
-    setModelSignals({ ...parsed, senales });
+    // `origen: "archivo"` marca que estas señales son de un período histórico:
+    // el gráfico salta a esa fecha, se queda quieto (sin WebSocket) y el sync
+    // del modelo en vivo no las pisa hasta que las quites.
+    setModelSignals({ ...parsed, senales, origen: "archivo" });
     // jump to the symbol the model traded so the markers are visible
     if (parsed.simbolo) setSymbol(parsed.simbolo.toUpperCase());
+
+    // …y a una temporalidad donde el backtest ENTERO entre en pantalla.
+    //
+    // El gráfico carga 1000 velas por ventana, así que la temporalidad decide
+    // cuánto tiempo abarca: en 15m —el default— son 10 días. Un senales.json
+    // de validación puede cubrir 8 meses. El chart saltaba al final del
+    // backtest y encuadraba los 8 meses, con datos para el 4% de ese ancho: se
+    // veía casi vacío y ninguna flecha se dibujaba, porque los marcadores caen
+    // fuera del rango de velas cargado. Subir la temporalidad es lo que hace
+    // que "el chart salta al período del backtest" sea verdad.
+    if (senales.length > 1) {
+      const desde = senales[0].tiempoMs;
+      const hasta = senales[senales.length - 1].tiempoMs;
+      ajustarTemporalidadesAlPeriodo(hasta - desde);
+    }
   }
 
   useEffect(() => {
@@ -115,15 +140,67 @@ export function ModelSignals() {
   }
 
   const n = modelSignals.senales.length;
+  // Color de identidad del modelo que se está mostrando, para que la etiqueta
+  // use el MISMO código de color que sus operaciones sobre las velas.
+  //
+  // Solo cuando la etiqueta muestra un modelo EN VIVO. Con un backtest
+  // cargado a mano, lo que se ve es esa corrida histórica y no el modelo
+  // activo: teñirla con su color mentiría, e intercambiar no cambiaría nada
+  // —el backtest manda sobre el sync en vivo hasta que lo quites con la ✕—.
+  const enVivo = modelSignals.origen === "vivo";
+  const color = enVivo && activo ? (fuentePorId(activo)?.color ?? null) : null;
+  const hayVarios = enVivo && disponibles.length > 1;
+
   return (
-    <div className="flex items-center gap-0.5 rounded bg-tv-blue/10 px-1.5 py-0.5">
-      <Bot className="h-3.5 w-3.5 text-tv-blue" />
+    <div
+      data-label="chip-senales"
+      className="flex items-center gap-0.5 rounded bg-tv-blue/10 px-1.5 py-0.5"
+      style={color ? { background: `${color}1f` } : undefined}
+    >
+      {color ? (
+        <span
+          className="h-2.5 w-2.5 shrink-0 rounded-sm"
+          style={{ background: color }}
+          aria-hidden
+        />
+      ) : (
+        <Bot className="h-3.5 w-3.5 text-tv-blue" />
+      )}
       <span className="px-1 text-xs text-tv-text">
-        {n} señales · {modelSignals.split}
+        {n} {n === 1 ? "señal" : "señales"} · {modelSignals.split}
       </span>
+
+      {/* Intercambiar de modelo: pasa al siguiente que esté publicando y
+          arrastra con él la etiqueta, el gráfico y el Probador —los tres leen
+          del modelo activo—. Aparece solo con dos o más motores. */}
+      {hayVarios && (
+        <button
+          onClick={() => {
+            const i = disponibles.indexOf(activo ?? "");
+            setModeloActivo(disponibles[(i + 1) % disponibles.length]);
+          }}
+          title={`Intercambiar modelo (${disponibles.length} publicando) · ahora: ${modelSignals.split}`}
+          aria-label="Intercambiar modelo mostrado"
+          className="rounded p-1 text-tv-text-muted hover:bg-tv-panel-hover hover:text-tv-text"
+        >
+          <ArrowLeftRight className="h-3.5 w-3.5" />
+        </button>
+      )}
+
+      {/* El ojo apaga TODO lo que la IA dibuja: las flechas Y la operación en
+          curso (caja, entrada, SL y TP). Antes solo tapaba las flechas y la
+          posición abierta seguía ahí, que es justo lo que uno quiere sacarse
+          de encima para mirar las velas limpias. Con un solo modelo, además,
+          es el único interruptor disponible: el panel de administración
+          aparece recién con dos. */}
       <button
         onClick={toggleShow}
-        title={showModelSignals ? "Ocultar señales" : "Mostrar señales"}
+        title={
+          showModelSignals
+            ? "Ocultar señales y la operación en curso"
+            : "Mostrar señales y la operación en curso"
+        }
+        aria-pressed={showModelSignals}
         className="rounded p-1 text-tv-text-muted hover:bg-tv-panel-hover hover:text-tv-text"
       >
         {showModelSignals ? (

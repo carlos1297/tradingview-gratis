@@ -14,6 +14,11 @@
 export interface OpcionesTransporte {
   /** Ruta o URL de la fuente, ya validada como no vacía. */
   url: string;
+  /**
+   * Orígenes alternativos a probar si `url` da 404, en orden. Los transportes
+   * push no aplican (no hay "otro" socket que probar) y lo ignoran.
+   */
+  urlsRespaldo?: string[];
   /** Cada cuánto consultar, en ms. Los transportes push lo ignoran. */
   msSondeo: number;
   /** Un mensaje/lectura del motor, sin interpretar. */
@@ -24,6 +29,17 @@ export interface OpcionesTransporte {
    * Un transporte que no puede distinguir ese caso simplemente no lo llama.
    */
   onAusente: () => void;
+  /**
+   * Se perdió el enlace con el motor y lo que haya en pantalla ya no es real.
+   *
+   * A diferencia de `onAusente` (la fuente dejó de existir), esto lo reporta un
+   * transporte push cuando su conexión se cierra: el servicio puede volver, y
+   * cuando vuelva republica su estado y el modelo reaparece solo. Mientras
+   * tanto no puede seguir dibujándose una operación abierta que quizá ya se
+   * cerró — un transporte que no distingue este caso simplemente no lo llama y
+   * queda cubierto por la antigüedad del estado.
+   */
+  onDesconectado?: () => void;
   /** Diagnóstico para consola: rechazo del servidor, formato ilegible… */
   onAviso?: (mensaje: string) => void;
 }

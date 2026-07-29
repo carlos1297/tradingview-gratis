@@ -85,6 +85,8 @@ export interface TickerSubscription {
 export class BinanceWS {
   private ws: WebSocket | null = null;
   private reconnectAttempts = 0;
+  /** Índice del host que funcionó la última vez. Solo avanza si falla. */
+  private hostActual = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private nextId = 1;
   private klineSubs = new Map<string, Set<KlineSubscription>>();
@@ -97,7 +99,12 @@ export class BinanceWS {
     if (this.ws || this.closing) return;
     // alterna de host en cada reconexión: arranca por el mirror .vision y cae
     // al dominio clásico si aquel está bloqueado (y viceversa).
-    const host = WS_HOSTS[this.reconnectAttempts % WS_HOSTS.length];
+    //
+    // `hostActual` recuerda cuál funcionó. Binance corta la conexión cada 24 h,
+    // y sin memoria cada corte reiniciaba la búsqueda desde el primer host:
+    // quien lo tenga bloqueado pagaba un ciclo de fallo + backoff en cada
+    // reconexión, para siempre.
+    const host = WS_HOSTS[this.hostActual % WS_HOSTS.length];
     this.ws = new WebSocket(host);
 
     this.ws.onopen = () => {
@@ -136,6 +143,9 @@ export class BinanceWS {
     if (this.reconnectTimer) return;
     const delay = Math.min(30000, 1000 * 2 ** this.reconnectAttempts);
     this.reconnectAttempts++;
+    // Probar el host siguiente en el próximo intento. Si conecta, `hostActual`
+    // se queda ahí: la caída de las 24 h no vuelve a empezar por el bloqueado.
+    this.hostActual++;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.connect();

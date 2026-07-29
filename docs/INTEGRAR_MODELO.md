@@ -161,12 +161,18 @@ NEXT_PUBLIC_MODELOS_EXTRA=[{"id":"dqn","etiqueta":"DQN","url":"/estado_dqn.json"
 Un JSON con un typo, una entrada sin `url` o un `id` repetido se descartan con
 un aviso en consola: **nunca dejan el visor en blanco**.
 
-### Camino B · en el registro
+### Camino B · una carpeta en el catálogo
 
-En `src/lib/modelos/registro.ts`, dentro de `MODELOS_INTEGRADOS`:
+Cada modelo vive en `src/lib/modelos/catalogo/<id>/`, con sus archivos
+nombrados con el id para que se identifiquen solos.
+
+**1. Creá `catalogo/dqn/dqn.fuente.ts`:**
 
 ```ts
-{
+import { adaptarContratoEstandar } from "../../nucleo/adaptadores";
+import type { FuenteModelo } from "../../nucleo/tipos";
+
+export const FUENTE_DQN: FuenteModelo = {
   id: "dqn",
   etiqueta: "DQN",
   descripcion: "Deep Q-Network · acciones discretas",
@@ -177,10 +183,32 @@ En `src/lib/modelos/registro.ts`, dentro de `MODELOS_INTEGRADOS`:
   // opcional, si tu cadencia no es la de una vela de 5 m:
   // msSondeo: 2000,
   // msFresco: 90_000,
-}
+  // opcional, si renombraste el archivo y querés seguir leyendo el viejo:
+  // urlsRespaldo: ["/estado_viejo.json"],
+};
 ```
 
-Eso es **todo**. No se tocan la barra, el gráfico, el store ni el Probador.
+**2. Sumala en `catalogo/index.ts`:**
+
+```ts
+import { FUENTE_DQN } from "./dqn/dqn.fuente";
+
+export const MODELOS_INTEGRADOS: FuenteModelo[] = [FUENTE_SAC, FUENTE_PPO, FUENTE_DQN];
+```
+
+Eso es **todo**. No se tocan la barra, el gráfico, el store, el Probador ni el
+núcleo — que ni se entera de que existís.
+
+Conviene además, en la misma carpeta:
+
+```
+dqn.README.md                        qué motor lo publica, cadencia, qué campos llena
+__tests__/dqn.integracion.test.ts    contrato ejecutable contra tu motor
+__tests__/fixtures/estado_dqn_v1.json  captura literal de lo que publica
+```
+
+Copiá `catalogo/sac/` como plantilla: su test de integración recorre el estado
+real y verifica que ninguna celda del panel quede vacía.
 
 ---
 
@@ -235,7 +263,9 @@ dibujan — es lo correcto: los precios son de otro mercado.
 
 ### Mi motor publica un formato que no puedo cambiar
 
-Escribí un adaptador en `src/lib/modelos/adaptadores.ts`:
+Escribí un adaptador dentro de la carpeta de TU modelo
+(`src/lib/modelos/catalogo/<id>/<id>.adaptador.ts`) — así el formato raro no
+ensucia el núcleo ni a los otros modelos:
 
 ```ts
 export function adaptarMiFormato(
@@ -252,7 +282,7 @@ formatos concretos.
 
 ### Necesito otro transporte (SSE, long-poll, postMessage…)
 
-1. Creá `src/lib/modelos/transportes/<tuTransporte>.ts` exportando un `Conector`:
+1. Creá `src/lib/modelos/nucleo/transportes/<tuTransporte>.ts` exportando un `Conector`:
 
    ```ts
    export const conectarSSE: Conector = ({ url, onDatos, onAviso }) => {
@@ -289,6 +319,7 @@ registro ya lo acepta y TypeScript verifica el resto. **El núcleo no cambia.**
 
 ## Documentos relacionados
 
+- [BIBLIOTECA_MODELOS.md](BIBLIOTECA_MODELOS.md) — qué componentes comunes podés reutilizar y desde dónde importarlos
 - [CONTRATO_MODELOS.md](CONTRATO_MODELOS.md) — formato JSON campo por campo
 - [ARQUITECTURA.md](ARQUITECTURA.md) — cómo procesa el visor lo que publicás
 - [contrato/estado_vivo.schema.json](contrato/estado_vivo.schema.json) — JSON Schema

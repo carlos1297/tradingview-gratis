@@ -48,7 +48,9 @@ dos fuentes para el mismo número y tarde o temprano se contradicen.
 El motor escribe un JSON en la carpeta `public/` del visor. Es el más simple:
 sin servidor, sin red, sin que el motor sepa que el visor existe.
 
-- **Ruta**: `public/estado_<tu_modelo>.json` (SAC usa `public/estado_vivo.json`).
+- **Ruta**: `public/estado_<tu_modelo>.json` — el id del modelo en el nombre,
+  porque en `public/` conviven los archivos de todos los motores. SAC usa
+  `public/estado_sac.json`.
 - **URL que ve el visor**: `/estado_<tu_modelo>.json`.
 - **El visor sondea** cada `msSondeo` (**5000 ms** por defecto).
 - **Cada escritura contiene el estado COMPLETO**, no un delta.
@@ -330,7 +332,7 @@ Compromiso hacia adelante: **subir la versión del contrato nunca rompe un motor
 viejo.** Los campos nuevos siempre son opcionales y con default. Un motor que
 publique v1 hoy va a seguir funcionando con visores futuros.
 
-La constante `CONTRATO_ACTUAL` está en `src/lib/modelos/tipos.ts` y el motor SAC
+La constante `CONTRATO_ACTUAL` está en `src/lib/modelos/nucleo/tipos.ts` y el motor SAC
 la refleja en `CONTRATO_ESTADO` (`modelo_SAC/operar_vivo.py`).
 
 ---
@@ -361,7 +363,7 @@ pip install jsonschema
 python -c "
 import json, jsonschema
 esquema = json.load(open('docs/contrato/estado_vivo.schema.json'))
-estado  = json.load(open('public/estado_vivo.json'))
+estado  = json.load(open('public/estado_sac.json'))
 jsonschema.validate(estado, esquema)
 print('✅ el estado cumple el contrato v1')
 "

@@ -5,6 +5,7 @@ import { useChartStore } from "@/lib/store/chart-store";
 import { entrarPantallaCompleta } from "@/lib/fullscreen";
 import { SymbolSelector } from "@/components/chart/SymbolSelector";
 import { IndicatorMenu } from "@/components/chart/IndicatorMenu";
+import { ModelSignals } from "@/components/chart/ModelSignals";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +45,15 @@ export function Header() {
         <SymbolSelector />
         <Separator orientation="vertical" className="mx-1 h-6 bg-tv-border" />
         <IndicatorMenu />
+        <Separator orientation="vertical" className="mx-1 h-6 bg-tv-border" />
+        {/* Carga de un `senales.json` de backtest.
+            Sin este botón, la ÚNICA fuente del Probador era un motor en vivo,
+            y un motor recién arrancado —con una posición abierta y ningún
+            cierre— deja el panel entero en «—»: no hay nada que calcular. Con
+            él se puede abrir la evaluación de `evaluar.py --guardar-curva` y
+            ver las métricas reales. Se auto-oculta si hay un modelo en vivo
+            publicando, para que un backtest no pise la corrida en curso. */}
+        <ModelSignals />
         <Separator orientation="vertical" className="mx-1 h-6 bg-tv-border" />
         {/* El Probador también se abre desde la barra inferior, pero esa fila
             puede quedar tapada según el alto de la ventana. Acá arriba el

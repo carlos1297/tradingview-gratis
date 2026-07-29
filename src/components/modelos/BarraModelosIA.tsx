@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getBinanceWS } from "@/lib/binance/ws";
 import { formatPrecioEstable } from "@/lib/format";
-import { saludMotor, vistaOperacion } from "@/lib/modelos/derivar";
+import { saludMotor, vistaOperacion } from "@/lib/modelos/nucleo/derivar";
+import { usePrecioMercado } from "@/lib/modelos/nucleo/usePrecioMercado";
 import { fuentePorId } from "@/lib/modelos/registro";
-import type { SaludMotor, SenalOperativa } from "@/lib/modelos/tipos";
+import type { SaludMotor, SenalOperativa } from "@/lib/modelos/nucleo/tipos";
 import { useChartStore } from "@/lib/store/chart-store";
 import { useModelosStore } from "@/lib/store/modelos-store";
 import { formatDuracion } from "@/lib/trades";
@@ -19,7 +19,7 @@ import { SelectorModelo } from "./SelectorModelo";
  *
  * Muestra en detalle el modelo ACTIVO: su estado, la operación abierta y el
  * rendimiento de la corrida. Es agnóstica del modelo — todo sale del contrato
- * canónico (lib/modelos/tipos.ts), así que sirve igual para SAC, PPO o el que
+ * canónico (lib/modelos/nucleo/tipos.ts), así que sirve igual para SAC, PPO o el que
  * venga; lo único que cambia es la entrada del registro.
  *
  * Es SOLO presentación: no abre conexiones ni sondea nada. De eso se encarga
@@ -82,10 +82,6 @@ export function BarraModelosIA() {
   const simboloGrafico = useChartStore((s) => s.symbol);
   const setSymbol = useChartStore((s) => s.setSymbol);
   const [ahora, setAhora] = useState(() => Date.now());
-  // El precio se guarda JUNTO a su par: si el modelo cambia de símbolo, el
-  // precio viejo deja de coincidir y se descarta solo, sin tener que
-  // resetear estado dentro del efecto.
-  const [tick, setTick] = useState<{ simbolo: string; precio: number } | null>(null);
 
   // reloj de 1 s: mantiene vivos el cronómetro de la operación y la frescura
   // del semáforo sin depender de que el motor escriba (decide cada 5 min)
@@ -94,18 +90,10 @@ export function BarraModelosIA() {
     return () => clearInterval(id);
   }, []);
 
-  // Precio en vivo del par que opera el modelo: reutiliza la MISMA conexión
-  // WebSocket que el resto del visor (singleton) en vez de abrir otra.
-  const simbolo = estado?.simbolo;
-  useEffect(() => {
-    if (!simbolo) return;
-    return getBinanceWS().subscribeMiniTickers([simbolo], (t) => {
-      if (t.symbol.toUpperCase() === simbolo.toUpperCase()) {
-        setTick({ simbolo, precio: t.close });
-      }
-    });
-  }, [simbolo]);
-  const precioVivo = tick && tick.simbolo === simbolo ? tick.precio : null;
+  // Precio en vivo del par que opera el modelo. El MISMO hook que usan el
+  // Probador y la caja de la operación en el gráfico: los tres tienen que
+  // medir el PnL contra el mismo número.
+  const precioVivo = usePrecioMercado(estado?.simbolo);
 
   // Sin ningún motor corriendo la barra no ocupa nada: el visor queda igual que
   // antes. Se devuelve un elemento vacío (no null) para no descolocar las filas

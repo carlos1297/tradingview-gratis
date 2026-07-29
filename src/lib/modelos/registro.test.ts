@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { adaptarContratoEstandar, adaptarFeedWebSocket } from "../adaptadores";
-import { modelosDeEntorno, REGISTRO_MODELOS, fuentePorId } from "../registro";
-import { conectorDe, esTransporte, TRANSPORTES } from "../transportes";
+import { adaptarContratoEstandar, adaptarFeedWebSocket } from "./nucleo/adaptadores";
+import { modelosDeEntorno, REGISTRO_MODELOS, fuentePorId } from "./registro";
+import { conectorDe, esTransporte, TRANSPORTES } from "./nucleo/transportes";
 
 /**
  * El registro es LA promesa de extensibilidad: agregar un modelo no puede
@@ -13,7 +13,9 @@ describe("registro integrado", () => {
   test("SAC viene de fábrica por archivo", () => {
     const sac = fuentePorId("sac")!;
     expect(sac.transporte).toBe("archivo");
-    expect(sac.url).toBe("/estado_vivo.json");
+    expect(sac.url).toBe("/estado_sac.json");
+    // y sigue leyendo el nombre viejo mientras el motor no se actualice
+    expect(sac.urlsRespaldo).toContain("/estado_vivo.json");
   });
 
   test("todas las fuentes declaran un transporte registrado", () => {

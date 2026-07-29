@@ -31,19 +31,19 @@ La restricción que manda sobre todo el diseño:
 └──────────────────────────┬─────────────────────────────────────────┘
                            │  JSON (contrato v1)
 ┌──────────────────────────▼─────────────────────────────────────────┐
-│  TRANSPORTE   lib/modelos/transportes/                             │
+│  TRANSPORTE   lib/modelos/nucleo/transportes/                      │
 │  Cómo viajan los bytes. NO interpreta nada.                        │
 │  archivo.ts (sondeo)   websocket.ts (push + reconexión)            │
 └──────────────────────────┬─────────────────────────────────────────┘
                            │  `unknown` crudo
 ┌──────────────────────────▼─────────────────────────────────────────┐
-│  ADAPTACIÓN   lib/modelos/adaptadores.ts                           │
-│  Traduce el formato de CADA motor al contrato canónico.            │
+│  ADAPTACIÓN   lib/modelos/nucleo/adaptadores.ts                    │
+│  Traduce el formato de cada TRANSPORTE al contrato canónico.       │
 │  Es la única pieza que conoce formatos concretos.                  │
 └──────────────────────────┬─────────────────────────────────────────┘
                            │  EstadoModeloIA (normalizado)
 ┌──────────────────────────▼─────────────────────────────────────────┐
-│  DOMINIO      lib/modelos/tipos.ts · derivar.ts · lib/trades.ts    │
+│  DOMINIO      lib/modelos/nucleo/{tipos,derivar}.ts · lib/trades.ts│
 │  Contrato + cálculos puros (PnL, R/R, señal, estadísticas).        │
 │  Sin React, sin stores, sin DOM.                                   │
 └──────────────────────────┬─────────────────────────────────────────┘
@@ -90,29 +90,64 @@ src/
 │   └── ui/                          Primitivas (shadcn)
 │
 └── lib/
-    ├── modelos/                ⭐ capa multi-modelo (dominio)
-    │   ├── senales.ts               Vocabulario de eventos + saneamiento
-    │   ├── tipos.ts                 CONTRATO CANÓNICO (EstadoModeloIA)
-    │   ├── adaptadores.ts           Traductores por formato de motor
-    │   ├── registro.ts              Catálogo de modelos (código + entorno)
-    │   ├── derivar.ts               PnL, R/R, señal, salud, duración
-    │   ├── useModelosIA.ts          NÚCLEO: transporte + adaptador + store
-    │   ├── transportes/
-    │   │   ├── tipos.ts             Interfaz `Conector`
-    │   │   ├── archivo.ts           Sondeo de un JSON en public/
-    │   │   ├── websocket.ts         Push con reconexión y backoff
-    │   │   └── index.ts             Registro de transportes
-    │   └── __tests__/               86 tests del contrato
+    ├── modelos/                ⭐ capa multi-modelo
+    │   ├── registro.ts              RAÍZ DE COMPOSICIÓN: núcleo + catálogo + entorno
+    │   ├── registro.test.ts
+    │   │
+    │   ├── nucleo/             ← agnóstico del modelo: NO se toca al sumar uno
+    │   │   ├── senales.ts           Vocabulario de eventos + saneamiento
+    │   │   ├── tipos.ts             CONTRATO CANÓNICO (EstadoModeloIA)
+    │   │   ├── adaptadores.ts       Traductores POR TRANSPORTE (no por modelo)
+    │   │   ├── derivar.ts           PnL, R/R, señal, salud, duración
+    │   │   ├── useModelosIA.ts      Cablea transporte + adaptador + store
+    │   │   ├── usePrecioMercado.ts  Un solo precio de mercado para todos
+    │   │   ├── transportes/
+    │   │   │   ├── tipos.ts         Interfaz `Conector`
+    │   │   │   ├── archivo.ts       Sondeo de un JSON en public/ (+ respaldo)
+    │   │   │   ├── websocket.ts     Push con reconexión y backoff
+    │   │   │   └── index.ts         Registro de transportes
+    │   │   └── __tests__/           Tests del contrato y de los transportes
+    │   │
+    │   └── catalogo/           ← UNA carpeta por modelo
+    │       ├── index.ts             Junta las fuentes integradas
+    │       ├── sac/
+    │       │   ├── sac.fuente.ts    Identidad, ruta y cadencia de SAC
+    │       │   ├── sac.README.md    Qué motor lo publica y cómo arrancarlo
+    │       │   └── __tests__/       sac.integracion.test.ts + su fixture
+    │       └── ppo/
+    │           ├── ppo.fuente.ts
+    │           ├── ppo.feed.ts      Envoltorio compatible del cliente WS
+    │           ├── ppo.README.md
+    │           └── __tests__/
     ├── store/
     │   ├── chart-store.ts           Config del gráfico (persiste)
     │   └── modelos-store.ts         Estado en vivo por modelo (efímero)
-    ├── binance/                     REST + WebSocket multiplexado
+    ├── binance/                     REST + WS multiplexado + temporalidades
     ├── indicators/                  Cálculos puros + registro de indicadores
+    ├── herramientas/                Registro de herramientas de dibujo
     ├── chart/pintarPosicion.ts      Dibujo de la operación abierta
     ├── trades.ts                    Reconstrucción de trades + métricas
-    ├── liveFeed.ts                  Envoltorio compatible sobre el transporte WS
     └── format.ts                    Formateo de precios, % y volumen
 ```
+
+### La frontera núcleo / catálogo
+
+Es la regla que hace que sumar un modelo no pueda romper a los demás:
+
+```
+componentes → registro.ts → catalogo/*  → nucleo/*
+                          ↘ nucleo/*
+```
+
+**El núcleo nunca importa el catálogo**: no sabe que existen SAC ni PPO. Por eso
+`useDescartarModelosDetenidos` recibe las fuentes por parámetro en vez de
+buscarlas en el registro — quien las conoce es `ProveedorModelosIA`.
+
+Y `adaptadores.ts` está partido **por transporte, no por modelo**:
+`adaptarContratoEstandar` le sirve igual a SAC, DQN o A2C, y
+`adaptarFeedWebSocket` a cualquier motor que hable ese protocolo. Un modelo solo
+necesita adaptador propio si publica un formato que no es el contrato v1 — y en
+ese caso vive en su carpeta del catálogo.
 
 ---
 
@@ -120,13 +155,14 @@ src/
 
 | Módulo | Responsabilidad | Qué NO hace |
 |---|---|---|
-| `senales.ts` | Vocabulario de eventos (`abrir_long`…) y saneamiento de listas crudas | No calcula PnL |
-| `tipos.ts` | Define `EstadoModeloIA`, `VistaOperacion`, `FuenteModelo` y los defaults de cadencia | No tiene lógica |
-| `transportes/` | Traer bytes y reintentar | No interpreta el JSON |
-| `adaptadores.ts` | Traducir el formato de un motor al contrato; tolerar versiones viejas | No calcula lecturas |
-| `registro.ts` | Catálogo de fuentes: código + `NEXT_PUBLIC_MODELOS_EXTRA` | No conecta nada |
-| `derivar.ts` | Calcular PnL, R/R, señal, salud, duración, posición dibujable | No guarda estado |
-| `useModelosIA.ts` | Cablear transporte + adaptador + store, aislando fallos | No conoce modelos concretos |
+| `nucleo/senales.ts` | Vocabulario de eventos (`abrir_long`…) y saneamiento de listas crudas | No calcula PnL |
+| `nucleo/tipos.ts` | Define `EstadoModeloIA`, `VistaOperacion`, `FuenteModelo` y los defaults de cadencia | No tiene lógica |
+| `nucleo/transportes/` | Traer bytes, reintentar, probar orígenes de respaldo | No interpreta el JSON |
+| `nucleo/adaptadores.ts` | Traducir el formato de un transporte al contrato; tolerar versiones viejas | No calcula lecturas |
+| `nucleo/derivar.ts` | Calcular PnL, R/R, señal, salud, duración, posición dibujable | No guarda estado |
+| `nucleo/useModelosIA.ts` | Cablear transporte + adaptador + store, aislando fallos | No conoce modelos concretos |
+| `catalogo/<id>/<id>.fuente.ts` | Identidad, origen y cadencia de UN modelo | No tiene lógica de datos |
+| `registro.ts` | Juntar catálogo + `NEXT_PUBLIC_MODELOS_EXTRA` | No conecta nada |
 
 ### La regla de oro
 
@@ -156,10 +192,10 @@ los hechos.
 
 ```
  1. El motor decide y escribe su estado
-        modelo_SAC/operar_vivo.py → public/estado_vivo.json  (escritura atómica)
+        modelo_SAC/operar_vivo.py → public/estado_sac.json   (escritura atómica)
 
  2. El transporte lo trae
-        transportes/archivo.ts → fetch cada `msSondeo` (5 s por defecto)
+        nucleo/transportes/archivo.ts → fetch cada `msSondeo` (5 s por defecto)
 
  3. El adaptador lo normaliza
         adaptadores.adaptarContratoEstandar(crudo, fuente, previo)
@@ -243,8 +279,8 @@ Tres puntos de extensión, todos declarativos:
 | Quiero agregar… | Toco… | Componentes afectados |
 |---|---|---|
 | Un **modelo** con contrato v1 | `NEXT_PUBLIC_MODELOS_EXTRA` (ni código) | ninguno |
-| Un **modelo** con formato propio | un adaptador + una entrada en `registro.ts` | ninguno |
-| Un **transporte** (SSE, long-poll…) | un archivo en `transportes/` + una línea en su `index.ts` | ninguno |
+| Un **modelo** con formato propio | una carpeta en `catalogo/<id>/` con su fuente y su adaptador | ninguno |
+| Un **transporte** (SSE, long-poll…) | un archivo en `nucleo/transportes/` + una línea en su `index.ts` | ninguno |
 | Un **indicador** de gráfico | una entrada en `indicators/registro.ts` | ninguno |
 
 El núcleo (`useModelosIA.ts`) **no tiene ningún `if` por modelo ni por
@@ -294,7 +330,8 @@ bun test src          # solo los tests (86, ~30 ms)
 bun run build         # build de producción
 ```
 
-Los tests viven en `src/lib/modelos/__tests__/` y cubren la parte del sistema
+Los tests viven junto a lo que prueban —`nucleo/__tests__/` y
+`catalogo/<id>/__tests__/`— y cubren la parte del sistema
 que un modelo nuevo puede romper:
 
 | Archivo | Qué fija |
@@ -309,6 +346,7 @@ que un modelo nuevo puede romper:
 
 ## Documentos relacionados
 
+- [BIBLIOTECA_MODELOS.md](BIBLIOTECA_MODELOS.md) — catálogo de componentes compartidos y buenas prácticas para extender
 - [CONTRATO_MODELOS.md](CONTRATO_MODELOS.md) — el formato JSON, campo por campo
 - [INTEGRAR_MODELO.md](INTEGRAR_MODELO.md) — guía paso a paso, con código
 - [contrato/estado_vivo.schema.json](contrato/estado_vivo.schema.json) — JSON Schema validable

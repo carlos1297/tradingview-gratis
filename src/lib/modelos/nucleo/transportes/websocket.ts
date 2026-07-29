@@ -16,7 +16,12 @@ import type { Conector } from "./tipos";
 const REINTENTO_INICIAL_MS = 1000;
 const REINTENTO_MAXIMO_MS = 10_000;
 
-export const conectarWebSocket: Conector = ({ url, onDatos, onAviso }) => {
+export const conectarWebSocket: Conector = ({
+  url,
+  onDatos,
+  onDesconectado,
+  onAviso,
+}) => {
   let ws: WebSocket | null = null;
   let cerrado = false;
   let reintentoMs = REINTENTO_INICIAL_MS;
@@ -53,6 +58,11 @@ export const conectarWebSocket: Conector = ({ url, onDatos, onAviso }) => {
 
     ws.onclose = () => {
       if (cerrado) return;
+      // El servicio se cayó. Avisar ANTES de agendar el reintento: mientras no
+      // vuelva, la última posición que publicó no se puede seguir mostrando
+      // como si fuera real. Si reconecta, el primer mensaje republica el estado
+      // y el modelo vuelve a aparecer solo.
+      onDesconectado?.();
       timer = setTimeout(conectar, reintentoMs);
       reintentoMs = Math.min(reintentoMs * 2, REINTENTO_MAXIMO_MS);
     };

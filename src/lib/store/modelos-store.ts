@@ -1,7 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
 import { create } from "zustand";
-import type { EstadoModeloIA } from "@/lib/modelos/tipos";
+import type { EstadoModeloIA } from "@/lib/modelos/nucleo/tipos";
 
 /**
  * modelos-store.ts — Estado en vivo de TODOS los modelos de IA registrados.
@@ -42,6 +43,14 @@ export const useModelosStore = create<ModelosState>()((set) => ({
 
   quitarModelo: (id) =>
     set((s) => {
+      // Ya no está: devolver el MISMO estado, no uno nuevo equivalente.
+      //
+      // A `quitarModelo` la llaman un barrido de 1 segundo y cada lectura de
+      // una fuente muerta, así que se invoca de más por diseño. Sin esta
+      // salida, cada llamada creaba un `estados` nuevo y re-renderizaba a
+      // todos los suscriptores del store varias veces por segundo para no
+      // cambiar nada.
+      if (!(id in s.estados) && !s.disponibles.includes(id)) return s;
       const estados = { ...s.estados };
       delete estados[id];
       const disponibles = s.disponibles.filter((x) => x !== id);
@@ -54,6 +63,22 @@ export const useModelosStore = create<ModelosState>()((set) => ({
 
   setModeloActivo: (modeloActivo) => set({ modeloActivo }),
 }));
+
+/**
+ * Estado de TODOS los modelos que respondieron, en orden de registro.
+ *
+ * Es lo que permite dibujar varios motores a la vez: el gráfico ya no mira
+ * solo al activo. El array se memoiza sobre `estados` y `disponibles`, así que
+ * solo cambia de identidad cuando de verdad llegó un tick.
+ */
+export function useModelosDisponibles(): EstadoModeloIA[] {
+  const estados = useModelosStore((s) => s.estados);
+  const disponibles = useModelosStore((s) => s.disponibles);
+  return useMemo(
+    () => disponibles.map((id) => estados[id]).filter((e): e is EstadoModeloIA => !!e),
+    [estados, disponibles],
+  );
+}
 
 /** Estado del modelo activo, o null si todavía no respondió ninguno. */
 export function useModeloActivo(): EstadoModeloIA | null {

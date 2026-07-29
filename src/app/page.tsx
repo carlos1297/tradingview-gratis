@@ -2,11 +2,13 @@
 
 import { useEffect } from "react";
 import { Minimize } from "lucide-react";
+import { BarraHerramientas } from "@/components/layout/BarraHerramientas";
 import { Header } from "@/components/layout/Header";
 import { RightSidebar } from "@/components/layout/RightSidebar";
 import { BottomPanel } from "@/components/layout/BottomPanel";
 import { VentanasTimeframes } from "@/components/chart/VentanasTimeframes";
 import { BarraModelosIA } from "@/components/modelos/BarraModelosIA";
+import { PanelModelos } from "@/components/modelos/PanelModelos";
 import { ProveedorModelosIA } from "@/components/modelos/ProveedorModelosIA";
 import { StrategyTester } from "@/components/panel/StrategyTester";
 import { useChartStore } from "@/lib/store/chart-store";
@@ -81,7 +83,7 @@ export default function HomePage() {
      * (`minmax(0,1fr)` — el 0 es lo que le permite encoger por debajo de su
      * contenido) y las demás toman su alto natural.
      *
-     * Las 4 filas se renderizan SIEMPRE, aunque estén vacías: si un hijo
+     * Las 5 filas se renderizan SIEMPRE, aunque estén vacías: si un hijo
      * devolviera null, los que siguen se correrían de fila y el `1fr` le
      * tocaría al panel equivocado.
      *
@@ -93,7 +95,7 @@ export default function HomePage() {
      */
     <div
       data-label="shell-app"
-      className="grid h-full w-full grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden bg-tv-bg"
+      className="grid h-full w-full grid-rows-[auto_auto_auto_minmax(0,1fr)_auto] overflow-hidden bg-tv-bg"
     >
       {/* Monitoreo de los modelos: no dibuja nada, solo mantiene vivas las
           suscripciones del registro. Va acá, fuera de todo panel ocultable,
@@ -105,6 +107,10 @@ export default function HomePage() {
       {/* monitor de modelos de IA: ancho completo, entre la barra superior y
           el gráfico. Se auto-oculta si no hay ningún motor corriendo. */}
       <BarraModelosIA />
+
+      {/* Administración multi-modelo: qué dibuja cada motor sobre el gráfico.
+          Se auto-oculta con menos de dos modelos corriendo. */}
+      <PanelModelos />
 
       {/*
        * Región elástica: los gráficos y el Probador se REPARTEN este espacio.
@@ -122,6 +128,11 @@ export default function HomePage() {
         className="flex min-h-0 flex-col overflow-hidden"
       >
         <div data-label="fila-graficos" className="flex min-h-0 flex-1 overflow-hidden">
+          {/* Herramientas de dibujo: pegada al borde izquierdo y a la altura
+              de los gráficos, como en TradingView. Va DENTRO de la fila (no
+              como columna del grid) para que no le robe alto a la barra
+              inferior ni al Probador. */}
+          <BarraHerramientas />
           <main
             data-label="area-graficos"
             aria-label="Gráficos"

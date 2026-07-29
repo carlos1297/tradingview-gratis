@@ -2,8 +2,12 @@
 
 import { useEffect } from "react";
 import { REGISTRO_MODELOS } from "@/lib/modelos/registro";
-import type { FuenteModelo } from "@/lib/modelos/tipos";
-import { useFuente, useSincronizarSenales } from "@/lib/modelos/useModelosIA";
+import type { FuenteModelo } from "@/lib/modelos/nucleo/tipos";
+import {
+  useDescartarModelosDetenidos,
+  useFuente,
+  useSincronizarSenales,
+} from "@/lib/modelos/nucleo/useModelosIA";
 
 /**
  * ProveedorModelosIA — Mantiene vivo el monitoreo de TODOS los modelos
@@ -44,6 +48,13 @@ export function ProveedorModelosIA() {
     };
   }, []);
 
+  // Va acá, junto a las suscripciones y fuera de todo panel ocultable: un
+  // motor que dejó de publicar tiene que desaparecer también en modo
+  // inmersivo, que es justo donde el gráfico se quedaba dibujando la última
+  // posición conocida sin nadie que lo delatara.
+  // Las fuentes van por parámetro: el núcleo no importa el catálogo, así que
+  // quien las conoce es este proveedor, que ya monta el registro.
+  useDescartarModelosDetenidos(REGISTRO_MODELOS);
   useSincronizarSenales();
 
   return (

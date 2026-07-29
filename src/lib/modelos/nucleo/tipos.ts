@@ -197,6 +197,15 @@ export interface FuenteModelo {
    * entorno del servicio no está definida): se ignora sin romper nada.
    */
   url: string | undefined;
+  /**
+   * Orígenes alternativos a probar si `url` no existe (404). Solo aplica al
+   * transporte "archivo".
+   *
+   * Sirve para renombrar el archivo que publica un motor sin coordinar el
+   * despliegue de los dos proyectos: el visor busca el nombre nuevo y cae al
+   * viejo mientras el motor no se actualice. Se queda con el que respondió.
+   */
+  urlsRespaldo?: string[];
   adaptar: Adaptador;
 
   // ── Cadencia (opcional; hay defaults sensatos para 5m) ────────────────

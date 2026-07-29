@@ -48,6 +48,22 @@ export interface ModelSignalsFile {
   split: string;
   checkpoint?: string;
   senales: ModelSignal[];
+  /**
+   * Quién puso estas señales. Determina cómo se comporta el gráfico:
+   *
+   * · `"archivo"` — un `senales.json` de backtest cargado a mano. Sus señales
+   *   son de un período HISTÓRICO, así que el gráfico salta a esa fecha y se
+   *   queda quieto: no tiene sentido suscribirse al vivo para mirar marzo.
+   * · `"vivo"` — un motor publicando ahora. El gráfico sigue en tiempo real.
+   *
+   * Sin esta distinción las dos fuentes escribían en el mismo lugar y el
+   * gráfico trataba a un modelo en vivo como si fuera un backtest: dejaba de
+   * suscribirse al WebSocket y las velas se congelaban.
+   *
+   * Opcional por compatibilidad; ausente se trata como `"archivo"`, que es el
+   * comportamiento que ya existía.
+   */
+  origen?: "vivo" | "archivo";
 }
 
 const EVENTOS = new Set<string>(EVENTOS_SENAL);

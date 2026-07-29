@@ -27,6 +27,8 @@ export function Watchlist() {
   // pendientes, fuera del estado para no meter efectos en los updaters
   const preciosRef = useRef<Record<string, number>>({});
   const flashTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  /** Frame pendiente para volcar los ticks acumulados (0 = ninguno). */
+  const rafRef = useRef(0);
 
   useEffect(() => {
     if (watchlist.length === 0) return;
@@ -48,12 +50,35 @@ export function Watchlist() {
       })
       .catch(console.error);
 
-    const dispararFlash = (simbolo: string, dir: "up" | "down") => {
-      setFlash((f) => ({ ...f, [simbolo]: dir }));
-      clearTimeout(flashTimersRef.current[simbolo]);
-      flashTimersRef.current[simbolo] = setTimeout(() => {
-        setFlash((f) => ({ ...f, [simbolo]: null }));
-      }, 300);
+    // Los ticks se ACUMULAN y se vuelcan una vez por frame.
+    //
+    // Binance manda un miniTicker por segundo y por par: con la watchlist por
+    // defecto eso eran ~10 renders por segundo del panel —uno por símbolo, sin
+    // batching entre ellos porque cada tick llega en su propio callback— más
+    // uno extra por cada flash y otro al apagarlo. Coalescer deja un render por
+    // frame como mucho, con todos los pares actualizados de una.
+    const volcado = { filas: {} as Record<string, Row>, flashes: {} as Record<string, "up" | "down"> };
+
+    const programarVolcado = () => {
+      if (rafRef.current) return;
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = 0;
+        if (cancelled) return;
+        const { filas, flashes } = volcado;
+        volcado.filas = {};
+        volcado.flashes = {};
+
+        if (Object.keys(filas).length > 0) setRows((prev) => ({ ...prev, ...filas }));
+        if (Object.keys(flashes).length > 0) {
+          setFlash((f) => ({ ...f, ...flashes }));
+          for (const simbolo of Object.keys(flashes)) {
+            clearTimeout(flashTimersRef.current[simbolo]);
+            flashTimersRef.current[simbolo] = setTimeout(() => {
+              setFlash((f) => ({ ...f, [simbolo]: null }));
+            }, 300);
+          }
+        }
+      });
     };
 
     const ws = getBinanceWS();
@@ -61,22 +86,21 @@ export function Watchlist() {
       const previo = preciosRef.current[tick.symbol];
       preciosRef.current[tick.symbol] = tick.close;
       if (previo !== undefined && tick.close !== previo) {
-        dispararFlash(tick.symbol, tick.close > previo ? "up" : "down");
+        volcado.flashes[tick.symbol] = tick.close > previo ? "up" : "down";
       }
-      setRows((prev) => ({
-        ...prev,
-        [tick.symbol]: {
-          symbol: tick.symbol,
-          price: tick.close,
-          pct: tick.pct,
-        },
-      }));
+      volcado.filas[tick.symbol] = {
+        symbol: tick.symbol,
+        price: tick.close,
+        pct: tick.pct,
+      };
+      programarVolcado();
     });
 
     const timers = flashTimersRef.current;
     return () => {
       cancelled = true;
       unsub();
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
       Object.values(timers).forEach(clearTimeout);
     };
   }, [watchlist]);

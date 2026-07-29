@@ -1,11 +1,11 @@
 "use client";
 
-import { conectarWebSocket } from "@/lib/modelos/transportes/websocket";
-import type { ModelSignal } from "@/lib/modelos/senales";
+import { conectarWebSocket } from "@/lib/modelos/nucleo/transportes/websocket";
+import type { ModelSignal } from "@/lib/modelos/nucleo/senales";
 
 /**
  * liveFeed.ts — COMPATIBILIDAD. La implementación real vive ahora en
- * `lib/modelos/transportes/websocket.ts`, junto al resto de los transportes.
+ * `lib/modelos/nucleo/transportes/websocket.ts`, junto al resto de los transportes.
  *
  * Este archivo se conserva porque era la API pública del cliente WebSocket del
  * servicio de paper trading (`modelo_PPO/main.py`) y puede estar importado
@@ -15,7 +15,7 @@ import type { ModelSignal } from "@/lib/modelos/senales";
  * `transporte: "websocket"` y olvidate de este módulo.
  */
 
-/** @deprecated Usá `ModelSignal` de `lib/modelos/senales.ts`. */
+/** @deprecated Usá `ModelSignal` de `lib/modelos/nucleo/senales.ts`. */
 export type EventoVivo = ModelSignal;
 
 /** Forma del mensaje `tipo: "estado"` del servicio PPO. */

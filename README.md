@@ -46,6 +46,7 @@ Abrí [http://localhost:3000](http://localhost:3000). Funciona de entrada: sin l
 
 | Documento | Para qué |
 |---|---|
+| [docs/BIBLIOTECA_MODELOS.md](docs/BIBLIOTECA_MODELOS.md) | Catálogo de componentes compartidos: qué ofrece la plataforma y cómo lo usa un modelo |
 | [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) | Capas, dependencias, flujo de datos, responsabilidad de cada módulo |
 | [docs/CONTRATO_MODELOS.md](docs/CONTRATO_MODELOS.md) | El contrato JSON campo por campo: obligatorios, opcionales, errores |
 | [docs/INTEGRAR_MODELO.md](docs/INTEGRAR_MODELO.md) | Guía paso a paso para conectar un modelo nuevo, con código |

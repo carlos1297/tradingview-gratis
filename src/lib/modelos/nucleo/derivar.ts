@@ -55,6 +55,15 @@ export interface PosicionEnGrafico {
   precioReferencia: number | null;
   /** Texto del marcador de entrada: "SAC", "PPO", "DEMO"… */
   etiqueta: string;
+  /**
+   * Color de identidad del modelo (el de su entrada en el registro).
+   *
+   * Con varios motores dibujando a la vez, la etiqueta sola no alcanza para
+   * saber de quién es cada caja de un vistazo. `undefined` = usar el color por
+   * lado (verde/rojo), que es lo correcto para la demo y para un modelo sin
+   * color declarado.
+   */
+  color?: string;
   esDemo: boolean;
 }
 
@@ -85,6 +94,32 @@ export function posicionParaGrafico(
 const DIRECCION: Record<LadoPosicion, number> = { LONG: 1, SHORT: -1, FLAT: 0 };
 
 /**
+ * PnL flotante de una posición, en porcentaje y en dinero.
+ *
+ * Es la ÚNICA fórmula del proyecto: la usan `vistaOperacion` (barra de modelos
+ * y Probador) y el dibujo de la operación sobre el gráfico. Tenerla repetida
+ * era lo que permitía que los tres mostraran porcentajes distintos del mismo
+ * trade — sobre todo el gráfico, que además medía contra el cierre de la
+ * última vela de SU temporalidad.
+ *
+ * Sin `nocional` el importe queda en `null`: sin exposición publicada no hay
+ * forma de convertir el porcentaje a dinero.
+ */
+export function pnlFlotante(
+  lado: LadoPosicion,
+  precioEntrada: number | null,
+  precioActual: number | null,
+  nocional: number | null,
+): { pct: number | null; usd: number | null } {
+  const dir = DIRECCION[lado];
+  if (dir === 0 || precioEntrada === null || precioEntrada <= 0 || precioActual === null) {
+    return { pct: null, usd: null };
+  }
+  const pct = dir * (precioActual / precioEntrada - 1) * 100;
+  return { pct, usd: nocional !== null ? (pct / 100) * nocional : null };
+}
+
+/**
  * Salud del motor. Se juzga por la antigüedad del archivo, no por el campo
  * `estado`: si el proceso muere, el JSON se congela con "operando" y solo el
  * desfase lo delata.
@@ -100,6 +135,31 @@ export function saludMotor(
   if (estado.estado === "arrancando") return "arrancando";
   if (desfase > msFresco) return "atrasado";
   return "operando";
+}
+
+/**
+ * ¿El motor dejó de dar señales de vida?
+ *
+ * Es el criterio con el que la interfaz decide dejar de mostrar sus
+ * operaciones: un motor apagado no tiene una posición abierta, tiene una
+ * posición *de la última vez que corrió*. Seguir dibujándola —con su PnL, su
+ * stop y su take profit— es afirmar algo que ya no es cierto.
+ *
+ * Se mira la ANTIGÜEDAD, no el campo `estado`: si el proceso muere, su JSON
+ * queda congelado diciendo "operando" y solo el reloj lo delata. Y se mira
+ * aparte del semáforo porque `saludMotor` devuelve "error" antes de consultar
+ * el reloj: un motor que murió dejando `estado: "error"` nunca llegaría a
+ * "detenido" y se quedaría en pantalla para siempre.
+ */
+export function motorSinVida(
+  estado: EstadoModeloIA,
+  ahoraMs: number,
+  msFresco: number = MS_FRESCO_POR_DEFECTO,
+): boolean {
+  return (
+    saludMotor(estado, ahoraMs, msFresco) === "detenido" ||
+    ahoraMs - estado.actualizadoMs > msFresco * 2
+  );
 }
 
 /**
@@ -156,14 +216,12 @@ export function vistaOperacion(
   const precioActual = (estado.enVivo ? precioMercado : null) ?? estado.precio;
   const entrada = estado.precioEntrada;
 
-  let pnlNoRealizadoPct: number | null = null;
-  let pnlNoRealizadoUsd: number | null = null;
-  if (hayPosicion && entrada !== null && entrada > 0 && precioActual !== null) {
-    pnlNoRealizadoPct = dir * (precioActual / entrada - 1) * 100;
-    if (estado.nocional !== null) {
-      pnlNoRealizadoUsd = (pnlNoRealizadoPct / 100) * estado.nocional;
-    } else if (estado.equity !== null && estado.saldo !== null) {
-      // sin nocional publicado: equity − saldo ES el flotante por definición
+  const flotante = pnlFlotante(lado, entrada, precioActual, estado.nocional);
+  const pnlNoRealizadoPct = flotante.pct;
+  let pnlNoRealizadoUsd = flotante.usd;
+  if (pnlNoRealizadoPct !== null && pnlNoRealizadoUsd === null) {
+    // sin nocional publicado: equity − saldo ES el flotante por definición
+    if (estado.equity !== null && estado.saldo !== null) {
       pnlNoRealizadoUsd = estado.equity - estado.saldo;
     }
   }

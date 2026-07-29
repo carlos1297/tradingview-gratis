@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { adaptarContratoEstandar } from "../adaptadores";
-import { posicionParaGrafico, saludMotor, vistaOperacion } from "../derivar";
-import { fuentePorId } from "../registro";
+import { adaptarContratoEstandar } from "../../../nucleo/adaptadores";
+import { posicionParaGrafico, saludMotor, vistaOperacion } from "../../../nucleo/derivar";
+import { fuentePorId } from "../../../registro";
 import { buildOperaciones } from "@/lib/trades";
 import crudo from "./fixtures/estado_sac_v1.json";
 
@@ -15,7 +15,8 @@ import crudo from "./fixtures/estado_sac_v1.json";
  * cómo lo lee, esto se pone rojo antes de que alguien lo note mirando el panel.
  *
  * Para actualizarlo tras un cambio deliberado del motor:
- *   cp public/estado_vivo.json src/lib/modelos/__tests__/fixtures/estado_sac_v1.json
+ *   cp public/estado_sac.json \
+ *      src/lib/modelos/catalogo/sac/__tests__/fixtures/estado_sac_v1.json
  */
 
 const AHORA = 1785273673095 + 30_000; // 30 s después de la captura
@@ -26,7 +27,8 @@ describe("el visor entiende lo que publica el motor SAC", () => {
 
   test("la fuente SAC está registrada como transporte de archivo", () => {
     expect(fuente.transporte).toBe("archivo");
-    expect(fuente.url).toBe("/estado_vivo.json");
+    expect(fuente.url).toBe("/estado_sac.json");
+    expect(fuente.urlsRespaldo).toContain("/estado_vivo.json");
   });
 
   test("el estado se adapta sin perder identidad ni versión", () => {

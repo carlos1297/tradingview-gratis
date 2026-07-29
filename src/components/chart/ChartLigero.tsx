@@ -41,11 +41,18 @@ import { AgregadorOrderFlow } from "@/lib/indicators/orderFlow";
 import { AgregadorFootprint } from "@/lib/indicators/footprint";
 import { buscarIndicador } from "@/lib/indicators/registro";
 import {
+  pnlFlotante,
   posicionParaGrafico,
   type PosicionEnGrafico,
-} from "@/lib/modelos/derivar";
+} from "@/lib/modelos/nucleo/derivar";
+import { usePrecioMercadoRef } from "@/lib/modelos/nucleo/usePrecioMercado";
+import type { ModelSignal } from "@/lib/modelos/nucleo/senales";
+import { dibuja } from "@/lib/modelos/nucleo/visibilidad";
+import { fuentePorId } from "@/lib/modelos/registro";
+import { buscarHerramienta } from "@/lib/herramientas/registro";
+import type { Dibujo, PuntoResuelto } from "@/lib/herramientas/tipos";
 import { useChartStore } from "@/lib/store/chart-store";
-import { useModeloActivo } from "@/lib/store/modelos-store";
+import { useModeloActivo, useModelosDisponibles } from "@/lib/store/modelos-store";
 import type { Candle, Timeframe } from "@/lib/binance/types";
 import { formatPrice, formatPct, formatVolume } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -262,6 +269,17 @@ export function ChartLigero({
   const dibujoPendientePosRef = useRef(false);
   /** Coalesce del recálculo intra-vela de indicadores (evita O(n) por tick) */
   const actualizarPuntoPendienteRef = useRef(false);
+  /**
+   * Herramientas de dibujo (regla, y las que sume el registro).
+   *
+   * El trazo en curso vive en un REF, no en estado: cambia con cada movimiento
+   * del cursor mientras se coloca un punto, y meterlo en `useState`
+   * re-renderizaría este componente entero —chart, series, indicadores y cinco
+   * canvas— decenas de veces por segundo. Lo visible lo produce el canvas.
+   */
+  const canvasHerramientasRef = useRef<HTMLCanvasElement>(null);
+  const dibujoRef = useRef<Dibujo | null>(null);
+  const dibujoPendienteHerrRef = useRef(false);
 
   const heatmapActivo = useChartStore((s) => s.indicators.liqHeatmap);
   const liqConfig = useChartStore((s) => s.liqHeatmapConfig);
@@ -274,6 +292,13 @@ export function ChartLigero({
   const indicadoresActivos = useChartStore((s) => s.indicadoresActivos);
   const modelSignals = useChartStore((s) => s.modelSignals);
   const showModelSignals = useChartStore((s) => s.showModelSignals);
+  const herramientaActiva = useChartStore((s) => s.herramientaActiva);
+  // Ref espejo: los handlers de clic y de crosshair se crean UNA vez, al montar
+  // el chart, y viven mientras dure la ventana. Sin la ref capturarían la
+  // herramienta del primer render; meterla en las deps obligaría a recrear el
+  // chart entero cada vez que tocás la barra lateral.
+  const herramientaRef = useRef(herramientaActiva);
+  herramientaRef.current = herramientaActiva;
   const heatmapActivoRef = useRef(heatmapActivo);
   heatmapActivoRef.current = heatmapActivo;
   const liqConfigRef = useRef(liqConfig);
@@ -288,19 +313,65 @@ export function ChartLigero({
   footprintConfigRef.current = footprintConfig;
   // Operación abierta sobre el gráfico. Prioridad: la REAL del modelo activo;
   // si no hay ninguna, la de ejemplo del botón "Ver demostración". El canvas
-  // no conoce modelos: solo recibe PosicionEnGrafico (lib/modelos/derivar.ts).
+  // no conoce modelos: solo recibe PosicionEnGrafico (lib/modelos/nucleo/derivar.ts).
   const posicionDemo = useChartStore((s) => s.posicionDemo);
   const estadoModelo = useModeloActivo();
-  // Solo si el modelo opera el par que esta ventana muestra: si no, sus precios
-  // pertenecen a otro mercado y la operación quedaría dibujada a una altura sin
-  // sentido. Mismo criterio que ya aplican los marcadores de señales.
-  const posicionReal = useMemo(
-    () =>
-      estadoModelo && estadoModelo.simbolo.toUpperCase() === symbol.toUpperCase()
-        ? posicionParaGrafico(estadoModelo)
-        : null,
-    [estadoModelo, symbol],
-  );
+  const modelosDisponibles = useModelosDisponibles();
+  const visibilidadModelos = useChartStore((s) => s.visibilidadModelos);
+  /**
+   * Esta ventana está mostrando un período HISTÓRICO: un `senales.json` de
+   * backtest cargado a mano, con su propio rango de fechas y de precios.
+   *
+   * Es la misma condición que decide si se carga el período del backtest y si
+   * se abre el WebSocket; se calcula acá arriba, y no dentro del efecto de
+   * datos, porque también tiene que poder consultarla el dibujo de la posición.
+   */
+  const modoHistorico =
+    !!modelSignals &&
+    modelSignals.origen !== "vivo" &&
+    modelSignals.senales.length > 0 &&
+    modelSignals.simbolo?.toUpperCase() === symbol.toUpperCase();
+
+  // Las operaciones abiertas de TODOS los modelos visibles, no solo la del
+  // activo: comparar dos motores en el mismo gráfico es el punto del panel de
+  // administración de modelos.
+  //
+  // Tres filtros, cada uno por su motivo:
+  //
+  //   · VISIBILIDAD — el usuario apagó ese modelo, o esa capa, en el panel.
+  //   · Otro PAR — sus precios son de otro mercado.
+  //   · Otro TIEMPO — con un backtest cargado, el gráfico está en noviembre de
+  //     2025 (BTC a ~103.000) y la posición del motor es de HOY (entrada
+  //     ~63.800). Dibujarla ahí ponía la entrada, el stop y el take profit a
+  //     30.000 dólares de las velas, aplastados contra el borde inferior, y
+  //     estiraba la escala de precios hasta dejar las velas ilegibles.
+  const posicionesReales = useMemo<PosicionEnGrafico[]>(() => {
+    if (modoHistorico) return [];
+    // El ojo de la etiqueta «N señales · …» es el interruptor MAESTRO de todo
+    // lo que la IA dibuja: apaga las flechas y también la operación en curso.
+    // Antes solo tapaba las flechas y la caja seguía ahí — justo lo que uno
+    // quiere sacarse de encima para mirar las velas limpias. Y con un solo
+    // modelo es el único interruptor que hay: el panel de administración
+    // aparece recién con dos.
+    if (!showModelSignals) return [];
+    const salida: PosicionEnGrafico[] = [];
+    for (const estado of modelosDisponibles) {
+      if (estado.simbolo.toUpperCase() !== symbol.toUpperCase()) continue;
+      if (!dibuja(visibilidadModelos, estado.modeloId, "posicion")) continue;
+      const pos = posicionParaGrafico(estado);
+      if (!pos) continue;
+      const mostrarBarreras = dibuja(visibilidadModelos, estado.modeloId, "barreras");
+      salida.push({
+        ...pos,
+        color: fuentePorId(estado.modeloId)?.color,
+        // Las barreras son una capa aparte: se pueden apagar dejando la caja.
+        stopLoss: mostrarBarreras ? pos.stopLoss : null,
+        takeProfit: mostrarBarreras ? pos.takeProfit : null,
+      });
+    }
+    return salida;
+  }, [modelosDisponibles, visibilidadModelos, symbol, modoHistorico, showModelSignals]);
+  const posicionReal = posicionesReales[0] ?? null;
   const posicionEnGrafico: PosicionEnGrafico | null =
     posicionReal ??
     (posicionDemo
@@ -318,6 +389,23 @@ export function ChartLigero({
       : null);
   const posicionDemoRef = useRef(posicionEnGrafico);
   posicionDemoRef.current = posicionEnGrafico;
+  /** TODAS las posiciones a dibujar: una por modelo visible con operación abierta. */
+  const posicionesRef = useRef<PosicionEnGrafico[]>([]);
+  posicionesRef.current = posicionesReales.length > 0
+    ? posicionesReales
+    : posicionEnGrafico
+      ? [posicionEnGrafico]   // la demo, que no viene de ningún modelo
+      : [];
+  // Precio con el que se mide el PnL de la caja de la operación. Es el MISMO
+  // que usan la barra de modelos y el Probador (WebSocket singleton de
+  // Binance), no el cierre de la última vela de esta ventana: si no, el mismo
+  // trade mostraba un porcentaje distinto en cada temporalidad.
+  //
+  // En ref, no en estado: acá el precio no se muestra, se dibuja — y el canvas
+  // de la posición ya se repinta solo cada 500 ms. Con `useState` este
+  // componente (chart + series + indicadores + 4 canvas) se re-renderizaba una
+  // vez por segundo y por ventana sin necesidad.
+  const precioMercadoRef = usePrecioMercadoRef(estadoModelo?.simbolo ?? symbol);
 
   // ── Crear el chart (una vez) ────────────────────────────────────────
   useEffect(() => {
@@ -385,6 +473,10 @@ export function ChartLigero({
       solicitarDibujoVpvr();
       solicitarDibujoFootprint();
       solicitarDibujoPosicion();
+      // Los puntos del trazo están anclados a tiempo/precio, no a píxeles: se
+      // vuelven a resolver acá y el dibujo aguanta pan y zoom sin recalcular
+      // nada ni re-renderizar.
+      solicitarDibujoHerramientas();
       if (rango) {
         // recordar la vista para restaurarla si la ventana se re-monta
         cacheRango.set(cacheKeyRef.current, { from: rango.from, to: rango.to });
@@ -393,10 +485,61 @@ export function ChartLigero({
       }
     });
 
+    // ── Herramientas de dibujo: fijar puntos con clic ──────────────────
+    // El chart sigue panéandose y zoomeando con la herramienta puesta, igual
+    // que en TradingView: `subscribeClick` solo dispara con un clic sin
+    // arrastre, así que no compite con la navegación.
+    chart.subscribeClick((param) => {
+      const def = buscarHerramienta(herramientaRef.current);
+      // `puntos: 0` es el cursor: no dibuja, no intercepta nada.
+      if (!def || def.puntos === 0) return;
+      const serieActual = serieRef.current;
+      if (!serieActual || !param.point || param.time === undefined) return;
+      const precio = serieActual.coordinateToPrice(param.point.y);
+      if (precio === null || !isFinite(precio)) return;
+
+      const punto = { tiempo: Number(param.time), precio };
+      const actual = dibujoRef.current;
+
+      if (!actual || actual.completo || actual.herramientaId !== def.id) {
+        // Trazo nuevo. El segundo punto arranca pegado al primero y desde acá
+        // sigue al cursor: así la previsualización no necesita ninguna rama.
+        dibujoRef.current = { herramientaId: def.id, puntos: [punto, punto], completo: false };
+      } else {
+        // Fijar el punto flotante (siempre el último) y, si todavía faltan,
+        // agregar uno nuevo que siga al cursor. Sirve para 2 puntos (regla,
+        // tendencia, Fibonacci) y para 3 (canal) sin tocar este código.
+        const fijados = [...actual.puntos.slice(0, -1), punto];
+        const completo = fijados.length >= def.puntos;
+        dibujoRef.current = {
+          herramientaId: def.id,
+          puntos: completo ? fijados : [...fijados, punto],
+          completo,
+        };
+      }
+      solicitarDibujoHerramientas();
+    });
+
     // leyenda OHLC: sigue el cursor; sin cursor muestra la última vela
     chart.subscribeCrosshairMove((param) => {
       const serieActual = serieRef.current;
       if (!serieActual) return;
+
+      // Previsualización: el último punto del trazo sigue al puntero. Se muta
+      // el array del ref en el lugar — sin estado, sin re-render; el repintado
+      // lo agenda `solicitarDibujoHerramientas` a un frame como mucho.
+      const enCurso = dibujoRef.current;
+      if (enCurso && !enCurso.completo && param.point && param.time !== undefined) {
+        const precio = serieActual.coordinateToPrice(param.point.y);
+        if (precio !== null && isFinite(precio)) {
+          enCurso.puntos[enCurso.puntos.length - 1] = {
+            tiempo: Number(param.time),
+            precio,
+          };
+          solicitarDibujoHerramientas();
+        }
+      }
+
       const data = param.time ? param.seriesData.get(serieActual) : undefined;
       if (data && "close" in data && param.time !== undefined) {
         const d = data as unknown as {
@@ -501,13 +644,17 @@ export function ChartLigero({
     sinMasHistorialRef.current = false;
     cargandoHistorialRef.current = false;
 
-    // con señales cargadas del par actual se muestra el período del backtest
-    const senalesDelPar =
-      modelSignals &&
-      modelSignals.senales.length > 0 &&
-      modelSignals.simbolo?.toUpperCase() === symbol.toUpperCase()
-        ? modelSignals.senales
-        : null;
+    // Un BACKTEST cargado a mano muestra su propio período histórico: el
+    // gráfico salta a esa fecha y no se suscribe al vivo (mirar marzo con el
+    // WebSocket abierto no tiene sentido).
+    //
+    // Un modelo EN VIVO no: sus señales son de ahora y el gráfico tiene que
+    // seguir corriendo. Sin este filtro por origen, cualquier motor publicando
+    // ponía al gráfico en modo histórico y las velas se congelaban — las dos
+    // fuentes escriben en el mismo `modelSignals`.
+    // `modoHistorico` es esta misma condición, calculada arriba para que el
+    // dibujo de la posición también pueda consultarla.
+    const senalesDelPar = modoHistorico ? modelSignals!.senales : null;
     const finMs = senalesDelPar
       ? Math.max(...senalesDelPar.map((s) => s.tiempoMs)) + 3_600_000
       : undefined;
@@ -546,11 +693,33 @@ export function ChartLigero({
       const rango = restaurar ? cacheRango.get(cacheKey) : undefined;
       if (ts && rango) {
         ts.setVisibleLogicalRange(rango); // re-monte: misma vista de antes
-      } else if (senalesDelPar) {
-        const desde = Math.floor(senalesDelPar[0].tiempoMs / 1000) - 3600;
-        const hasta =
-          Math.floor(senalesDelPar[senalesDelPar.length - 1].tiempoMs / 1000) + 3600;
-        ts?.setVisibleRange({ from: desde as UTCTimestamp, to: hasta as UTCTimestamp });
+      } else if (senalesDelPar && velas.length > 0) {
+        // Encuadrar el backtest, pero SIN salirse de las velas que se cargaron.
+        //
+        // Un senales.json puede abarcar mucho más de lo que entra en una carga
+        // de 1000 velas (8 meses de señales contra 10 días en 15m). Pedir ese
+        // rango dejaba el chart con datos en el 4% del ancho visible: se veía
+        // vacío. Acotando a lo que hay, la vista siempre muestra velas — y el
+        // scroll hacia la izquierda sigue trayendo el resto del historial.
+        //
+        // Lo normal es que ni haga falta: al cargar señales se sube la
+        // temporalidad para que el período entre entero (ver ModelSignals).
+        // Esto es el cinturón por si el período no entra ni en la más gruesa.
+        const primera = velas[0].time;
+        const ultima = velas[velas.length - 1].time;
+        const desde = Math.max(
+          Math.floor(senalesDelPar[0].tiempoMs / 1000) - 3600,
+          primera,
+        );
+        const hasta = Math.min(
+          Math.floor(senalesDelPar[senalesDelPar.length - 1].tiempoMs / 1000) + 3600,
+          ultima,
+        );
+        if (desde < hasta) {
+          ts?.setVisibleRange({ from: desde as UTCTimestamp, to: hasta as UTCTimestamp });
+        } else {
+          ts?.fitContent(); // las señales no se solapan con lo cargado
+        }
       } else {
         ts?.fitContent();
       }
@@ -787,22 +956,24 @@ export function ChartLigero({
   }
   cargarMasHistorialRef.current = cargarMasHistorial;
 
-  // ── Señales del modelo como markers ────────────────────────────────
-  function actualizarMarkers() {
-    if (!markersRef.current) return;
-    const sig = useChartStore.getState().modelSignals;
-    const mostrar = useChartStore.getState().showModelSignals;
-    if (
-      !sig ||
-      !mostrar ||
-      sig.simbolo?.toUpperCase() !== symbol.toUpperCase()
-    ) {
-      markersRef.current.setMarkers([]);
-      return;
-    }
-    const paso = SEGUNDOS_TF[timeframe];
-    const markers: SeriesMarker<Time>[] = sig.senales.slice(-3000).map((s) => {
+  // ── Señales de los modelos como markers ────────────────────────────
+  /**
+   * Convierte las señales de UNA fuente en marcadores.
+   *
+   * `prefijo` identifica al modelo en la propia flecha ("SAC L", "PPO SL"):
+   * con dos motores operando el mismo par, el color solo no alcanza para
+   * distinguirlos si el usuario es daltónico o si los colores se parecen.
+   * `color` tiñe la flecha con la identidad del modelo.
+   */
+  function marcasDe(
+    senales: readonly ModelSignal[],
+    paso: number,
+    opciones: { prefijo?: string; color?: string; aperturas: boolean; cierres: boolean },
+  ): SeriesMarker<Time>[] {
+    const salida: SeriesMarker<Time>[] = [];
+    for (const s of senales) {
       const esApertura = s.evento.startsWith("abrir");
+      if (esApertura ? !opciones.aperturas : !opciones.cierres) continue;
       const esLong = s.evento.endsWith("long");
       const alcista = esApertura ? esLong : !esLong; // flecha de compra o venta
       const texto = esApertura
@@ -816,22 +987,68 @@ export function ChartLigero({
             : s.motivo === "liquidacion"
               ? "LIQ"
               : "C";
-      return {
+      salida.push({
         // anclar al inicio de la vela que contiene la señal
         time: (Math.floor(s.tiempoMs / 1000 / paso) * paso) as UTCTimestamp,
         position: alcista ? "belowBar" : "aboveBar",
         shape: alcista ? "arrowUp" : "arrowDown",
-        color: esApertura ? (esLong ? "#26a69a" : "#ef5350") : "#787b86",
-        text: texto,
-      };
-    });
+        // Sin color de modelo se cae al criterio de siempre (verde compra /
+        // rojo venta / gris cierre), que es lo correcto para un backtest.
+        color:
+          opciones.color ??
+          (esApertura ? (esLong ? "#26a69a" : "#ef5350") : "#787b86"),
+        text: opciones.prefijo ? `${opciones.prefijo} ${texto}` : texto,
+      });
+    }
+    return salida;
+  }
+
+  function actualizarMarkers() {
+    if (!markersRef.current) return;
+    if (!useChartStore.getState().showModelSignals) {
+      markersRef.current.setMarkers([]);
+      return;
+    }
+    const paso = SEGUNDOS_TF[timeframe];
+    const vis = useChartStore.getState().visibilidadModelos;
+    let markers: SeriesMarker<Time>[] = [];
+
+    const sig = useChartStore.getState().modelSignals;
+    if (modoHistorico && sig) {
+      // Backtest: es UNA corrida histórica, no un modelo en vivo. Se dibuja
+      // entera y sin prefijo — no hay con quién confundirla.
+      markers = marcasDe(sig.senales.slice(-3000), paso, {
+        aperturas: true,
+        cierres: true,
+      });
+    } else {
+      // En vivo: se acumulan las señales de TODOS los modelos visibles, cada
+      // uno con su color y su prefijo.
+      for (const estado of modelosDisponibles) {
+        if (estado.simbolo.toUpperCase() !== symbol.toUpperCase()) continue;
+        const verAperturas = dibuja(vis, estado.modeloId, "aperturas");
+        const verCierres = dibuja(vis, estado.modeloId, "cierres");
+        if (!verAperturas && !verCierres) continue;
+        markers.push(
+          ...marcasDe(estado.senales.slice(-3000), paso, {
+            prefijo: estado.modeloEtiqueta,
+            color: fuentePorId(estado.modeloId)?.color,
+            aperturas: verAperturas,
+            cierres: verCierres,
+          }),
+        );
+      }
+      // lightweight-charts EXIGE los marcadores ordenados por tiempo; al
+      // mezclar dos modelos dejan de venir ordenados por construcción.
+      markers.sort((a, b) => (a.time as number) - (b.time as number));
+    }
     markersRef.current.setMarkers(markers);
   }
 
   useEffect(() => {
     actualizarMarkers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modelSignals, showModelSignals, symbol, timeframe]);
+  }, [modelSignals, showModelSignals, symbol, timeframe, modelosDisponibles, visibilidadModelos, modoHistorico]);
 
   // ── Liquidation Heatmap sobre el chart ─────────────────────────────
   const dibujoPendienteRef = useRef(false);
@@ -1288,6 +1505,91 @@ export function ChartLigero({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [footprintConfig]);
 
+  // ── Herramientas de dibujo (regla, y las que sume el registro) ─────
+  function solicitarDibujoHerramientas() {
+    if (dibujoPendienteHerrRef.current) return;
+    dibujoPendienteHerrRef.current = true;
+    requestAnimationFrame(() => {
+      dibujoPendienteHerrRef.current = false;
+      dibujarHerramientas();
+    });
+  }
+
+  /**
+   * Resuelve los puntos del trazo a píxeles y delega el dibujo a la
+   * herramienta. Este componente aporta lo ÚNICO que solo él puede aportar
+   * —traducir tiempo/precio a coordenadas— y no sabe qué se está dibujando.
+   */
+  function dibujarHerramientas() {
+    const canvas = canvasHerramientasRef.current;
+    const contenedor = contenedorRef.current;
+    const chart = chartRef.current;
+    const serie = serieRef.current;
+    if (!canvas || !contenedor || !chart || !serie) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const ancho = contenedor.clientWidth;
+    const alto = contenedor.clientHeight;
+    canvas.width = Math.floor(ancho * dpr);
+    canvas.height = Math.floor(alto * dpr);
+    canvas.style.width = `${ancho}px`;
+    canvas.style.height = `${alto}px`;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Limpiar SIEMPRE, antes de cualquier salida: es lo que borra el trazo
+    // cuando se cambia de herramienta, de par o de temporalidad.
+    ctx.clearRect(0, 0, ancho, alto);
+
+    const dibujo = dibujoRef.current;
+    if (!dibujo) return;
+    const def = buscarHerramienta(dibujo.herramientaId);
+    if (!def?.pintar) return;
+
+    const ts = chart.timeScale();
+    const puntos: PuntoResuelto[] = [];
+    for (const p of dibujo.puntos) {
+      const x = ts.timeToCoordinate(p.tiempo as UTCTimestamp);
+      const y = serie.priceToCoordinate(p.precio);
+      // Un punto que ya no existe en los datos (cambio de temporalidad, o
+      // historial podado) invalida el trazo entero: media regla no dice nada.
+      if (x === null || y === null) return;
+      puntos.push({ ...p, x, y });
+    }
+
+    const plotW = ts.width();
+    const plotH = chart.paneSize().height;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, plotW, plotH);
+    ctx.clip();
+    def.pintar(ctx, {
+      puntos,
+      completo: dibujo.completo,
+      velas: velasRef.current,
+      ancho: plotW,
+      alto: plotH,
+    });
+    ctx.restore();
+  }
+
+  /**
+   * Cambiar de herramienta, de par o de temporalidad descarta el trazo.
+   *
+   * Los dos últimos no son opcionales: los puntos están anclados a velas
+   * concretas, y una medición hecha en 5m no significa lo mismo —ni cae en el
+   * mismo lugar— sobre las velas de 1m o de otro mercado.
+   */
+  useEffect(() => {
+    dibujoRef.current = null;
+    solicitarDibujoHerramientas();
+    const contenedor = contenedorRef.current;
+    if (contenedor) {
+      contenedor.style.cursor = buscarHerramienta(herramientaActiva)?.cursor ?? "";
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [herramientaActiva, symbol, timeframe]);
+
   // ── Operación abierta de ejemplo (demo) sobre el chart ─────────────
   function solicitarDibujoPosicion() {
     if (dibujoPendientePosRef.current) return;
@@ -1316,10 +1618,13 @@ export function ChartLigero({
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, ancho, alto);
 
-    const pos = posicionDemoRef.current;
     const velas = velasRef.current;
-    if (!pos || velas.length < 2) return;
+    if (velas.length < 2) return;
 
+    // Una caja POR MODELO visible con operación abierta. El bucle es lo único
+    // que cambió al pasar a multi-modelo: el dibujo de cada una sigue siendo
+    // el mismo de siempre.
+    for (const pos of posicionesRef.current) {
     let entrada: { time: number; precio: number; lado: "long" | "short" };
     if (pos.esDemo || pos.precioEntrada === null) {
       // demo: anclar a una vela real ~25 velas atrás (una sola vez)
@@ -1344,10 +1649,18 @@ export function ChartLigero({
       };
     }
     const ultima = velas[velas.length - 1];
-    // Un motor en replay publica su propio precio (histórico): medir el PnL
-    // contra el cierre en vivo del gráfico daría una caja que contradice al
-    // panel. Con motor en vivo, precioReferencia es null y manda el gráfico.
-    const precioActual = pos.precioReferencia ?? ultima.close;
+    // Con qué precio se mide el PnL, en orden de prioridad:
+    //
+    //  1. `precioReferencia` — motor en REPLAY: publica precios históricos y
+    //     medirlos contra el mercado de hoy daría cientos de por ciento.
+    //  2. el precio de mercado compartido — la MISMA fuente que la barra y el
+    //     Probador, así los tres coinciden.
+    //  3. el cierre de la última vela — solo como red de seguridad hasta que
+    //     llegue el primer tick. Era el criterio anterior, y es exactamente lo
+    //     que hacía que el porcentaje cambiara al cambiar de temporalidad: la
+    //     vela de 5m y la de 1m no cierran en el mismo instante, y una ventana
+    //     restaurada del caché arranca con una vela vieja.
+    const precioActual = pos.precioReferencia ?? precioMercadoRef.current ?? ultima.close;
 
     const ts = chart.timeScale();
     const plotW = ts.width();
@@ -1355,7 +1668,7 @@ export function ChartLigero({
     const xEraw = ts.timeToCoordinate(entrada.time as UTCTimestamp);
     const xAraw = ts.timeToCoordinate(ultima.time as UTCTimestamp);
     const yEc = serie.priceToCoordinate(entrada.precio);
-    if (yEc === null) return;
+    if (yEc === null) continue;
     const xE: number = xEraw ?? 0; // entrada fuera de vista por la izquierda → borde
     const xA: number = xAraw ?? plotW;
     const yE: number = yEc;
@@ -1370,16 +1683,31 @@ export function ChartLigero({
     // nada de gráficos, así que se puede renderizar y revisar por separado.
     const yDe = (precio: number | null) =>
       precio === null ? null : serie.priceToCoordinate(precio);
+    // Misma función que alimenta la barra de modelos y el Probador: el PnL de
+    // la caja no puede discrepar del de los paneles.
+    const flotante = pnlFlotante(
+      pos.lado === "long" ? "LONG" : "SHORT",
+      entrada.precio,
+      precioActual,
+      pos.nocional,
+    );
+    const pnlPct = flotante.pct ?? 0;
+    // Con nocional real el P/L es dinero de verdad; en la demo (sin nocional
+    // publicado) se asume una exposición de 0.5 BTC, como siempre.
+    const pnlUsd =
+      flotante.usd ??
+      (precioActual - entrada.precio) * (pos.lado === "long" ? 1 : -1) * 0.5;
     pintarPosicion(
       ctx,
       {
         lado: pos.lado,
         etiqueta: pos.etiqueta,
+        color: pos.color,
         precioEntrada: entrada.precio,
-        precioActual,
         stopLoss: pos.stopLoss,
         takeProfit: pos.takeProfit,
-        nocional: pos.nocional,
+        pnlUsd,
+        pnlPct,
       },
       {
         xEntrada: Math.min(xE, xA),
@@ -1391,6 +1719,7 @@ export function ChartLigero({
     );
 
     ctx.restore();
+    }
   }
 
   useEffect(() => {
@@ -1400,14 +1729,15 @@ export function ChartLigero({
     solicitarDibujoPosicion();
     // refresco periódico: cubre autoscale de precio, resize y el avance del
     // precio actual mientras la operación sigue abierta
-    const id = posicionEnGrafico
+    const hayAlgoQueDibujar = posicionesRef.current.length > 0;
+    const id = hayAlgoQueDibujar
       ? window.setInterval(solicitarDibujoPosicion, 500)
       : 0;
     return () => {
       if (id) window.clearInterval(id);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [posicionEnGrafico]);
+  }, [posicionEnGrafico, posicionesReales]);
 
   // ── Order Flow / CVD (pane propio, en vivo desde @aggTrade) ────────
   useEffect(() => {
@@ -1560,6 +1890,16 @@ export function ChartLigero({
           ref={canvasPosRef}
           data-label="grafico-capa-posicion"
           className="pointer-events-none absolute left-0 top-0 z-[6]"
+        />
+        {/* Herramientas de dibujo, por encima de todo lo demás: es lo que el
+            usuario está manipulando en este momento. `pointer-events-none` es
+            deliberado — los clics los recibe el chart (`subscribeClick`), que
+            ya los traduce a tiempo/precio; interceptarlos acá rompería el pan
+            y el zoom. */}
+        <canvas
+          ref={canvasHerramientasRef}
+          data-label="grafico-capa-herramientas"
+          className="pointer-events-none absolute left-0 top-0 z-[7]"
         />
         <div
           ref={leyendaRef}

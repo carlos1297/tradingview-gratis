@@ -31,7 +31,9 @@ export async function fetchKlines(
   // endTimeMs → historical review mode (e.g. the backtest window of the RL model)
   const end = endTimeMs !== undefined ? `&endTime=${Math.floor(endTimeMs)}` : "";
   const res = await pedir(
-    `/klines?symbol=${symbol.toUpperCase()}&interval=${interval}&limit=${limit}${end}`,
+    // El par se escapa: viene del store, que se rehidrata desde localStorage.
+    // Sin escapar, un valor con `&` inyectaría parámetros en la query.
+    `/klines?symbol=${encodeURIComponent(symbol.toUpperCase())}&interval=${encodeURIComponent(interval)}&limit=${limit}${end}`,
   );
   if (!res.ok) throw new Error(`klines ${res.status}`);
   const data = (await res.json()) as unknown[][];
@@ -47,7 +49,9 @@ export async function fetchKlines(
 }
 
 export async function fetchTicker24h(symbol: string): Promise<Ticker24h> {
-  const res = await pedir(`/ticker/24hr?symbol=${symbol.toUpperCase()}`);
+  const res = await pedir(
+    `/ticker/24hr?symbol=${encodeURIComponent(symbol.toUpperCase())}`,
+  );
   if (!res.ok) throw new Error(`ticker ${res.status}`);
   const t = await res.json();
   return {

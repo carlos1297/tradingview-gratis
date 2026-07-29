@@ -38,12 +38,27 @@ export interface DatosPosicion {
   lado: "long" | "short";
   /** Identidad que encabeza la etiqueta: "SAC", "PPO", "DEMO"… */
   etiqueta: string;
+  /**
+   * Color de identidad del modelo. Tiñe la cápsula que lleva su nombre, para
+   * distinguir de un vistazo las cajas de dos motores dibujados a la vez.
+   * Sin él manda el color del lado (verde comprando, rojo vendiendo).
+   */
+  color?: string;
   precioEntrada: number;
-  precioActual: number;
   stopLoss: number | null;
   takeProfit: number | null;
-  /** Exposición en USD; sin ella el P/L se muestra solo en porcentaje. */
-  nocional: number | null;
+  /**
+   * PnL flotante YA calculado, en dinero y en porcentaje.
+   *
+   * No se deriva acá a propósito. Cuando este módulo lo calculaba a partir del
+   * "precio actual" que le pasara cada quien, el gráfico terminaba midiendo
+   * contra el cierre de la última vela de SU temporalidad: el mismo trade
+   * mostraba un porcentaje en la ventana de 1m, otro en la de 5m y un tercero
+   * en la barra de modelos. Ahora la fórmula vive una sola vez, en
+   * `lib/modelos/nucleo/derivar.ts` (`pnlFlotante`), y acá solo se dibuja.
+   */
+  pnlUsd: number;
+  pnlPct: number;
 }
 
 /** Coordenadas en píxeles, ya resueltas por quien tiene el gráfico. */
@@ -134,18 +149,14 @@ export function pintarPosicion(
   geo: GeometriaPosicion,
 ) {
   const { xEntrada, xFin, yEntrada, ySl, yTp } = geo;
-  const dir = datos.lado === "long" ? 1 : -1;
-  const pnlPct = dir * (datos.precioActual / datos.precioEntrada - 1) * 100;
-  // Con nocional real el P/L es dinero de verdad; en la demo se asume 0.5 BTC.
-  const pnlUsd =
-    datos.nocional !== null
-      ? (pnlPct / 100) * datos.nocional
-      : (datos.precioActual - datos.precioEntrada) * dir * 0.5;
+  const { pnlUsd, pnlPct } = datos;
 
   const colorPnl = pnlUsd >= 0 ? COLOR_GANANCIA : COLOR_PERDIDA;
-  // El lado tiñe la identidad: verde comprando, rojo vendiendo. Es lo primero
-  // que se busca en una posición y no debería hacer falta leer el texto.
-  const colorLado = datos.lado === "long" ? COLOR_GANANCIA : COLOR_PERDIDA;
+  // Con un solo modelo, el lado tiñe la identidad: verde comprando, rojo
+  // vendiendo. Con varios a la vez eso deja de servir —dos motores en LONG se
+  // ven idénticos—, así que manda el color del modelo cuando lo declara.
+  const colorLado =
+    datos.color ?? (datos.lado === "long" ? COLOR_GANANCIA : COLOR_PERDIDA);
 
   // La operación se extiende desde su apertura hasta el BORDE derecho, no
   // hasta la última vela: sigue abierta, y cortarla ahí la haría parecer

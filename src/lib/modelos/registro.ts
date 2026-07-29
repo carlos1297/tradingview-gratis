@@ -1,22 +1,32 @@
-import { adaptarContratoEstandar, adaptarFeedWebSocket } from "./adaptadores";
-import { esTransporte, type Transporte } from "./transportes";
-import type { Adaptador, FuenteModelo } from "./tipos";
+import { MODELOS_INTEGRADOS } from "./catalogo";
+import { adaptarContratoEstandar, adaptarFeedWebSocket } from "./nucleo/adaptadores";
+import { esTransporte, type Transporte } from "./nucleo/transportes";
+import type { Adaptador, FuenteModelo } from "./nucleo/tipos";
 
 /**
- * registro.ts — Catálogo de modelos de IA que la interfaz puede monitorear.
+ * registro.ts — RAÍZ DE COMPOSICIÓN de la capa multi-modelo.
+ *
+ * Es el único módulo que conoce las dos mitades a la vez, y por eso vive acá
+ * arriba y no dentro de ninguna:
+ *
+ *     componentes → registro.ts → catalogo/*  → nucleo/*
+ *                               ↘ nucleo/*
+ *
+ * El **núcleo nunca importa el catálogo**: no sabe que existe SAC ni PPO. Eso
+ * es lo que hace que sumar un modelo no pueda romper a los demás.
  *
  * ─────────────────────────────────────────────────────────────────────────
  *  PARA AGREGAR UN MODELO NUEVO hay DOS caminos, y ninguno toca componentes:
  *
- *  A) SIN CÓDIGO — si el motor publica el contrato v1 (ver tipos.ts), basta
- *     con declararlo en la variable de entorno `NEXT_PUBLIC_MODELOS_EXTRA`
- *     (JSON, ver `modelosDeEntorno` más abajo). Es el camino recomendado:
- *     ni recompilar la app ni tocar el repo del visor.
+ *  A) SIN CÓDIGO — si el motor publica el contrato v1 (ver nucleo/tipos.ts),
+ *     basta con declararlo en la variable de entorno
+ *     `NEXT_PUBLIC_MODELOS_EXTRA` (ver `modelosDeEntorno` más abajo). Es el
+ *     camino recomendado: ni recompilar la app ni tocar el repo del visor.
  *
- *  B) EN CÓDIGO — si querés que el modelo venga de fábrica, o si publica un
- *     formato propio y necesita un adaptador a medida, agregá una entrada a
- *     `MODELOS_INTEGRADOS`. El adaptador es la ÚNICA pieza que conoce ese
- *     formato.
+ *  B) EN CÓDIGO — si querés que venga de fábrica, creá `catalogo/<id>/` con su
+ *     `<id>.fuente.ts` y sumalo en `catalogo/index.ts`. Si además publica un
+ *     formato propio, el adaptador va en esa misma carpeta y es la ÚNICA pieza
+ *     que conoce ese formato.
  *
  *  En los dos casos: no hay que tocar la barra, el gráfico, el store ni el
  *  Probador de estrategias. Todos consumen el contrato canónico y se
@@ -37,30 +47,6 @@ const ADAPTADOR_POR_TRANSPORTE: Record<Transporte, Adaptador> = {
 /** Color de acento cuando la fuente no declara uno. */
 const COLOR_POR_DEFECTO = "#26a69a";
 
-/** Modelos que vienen de fábrica con el visor. */
-const MODELOS_INTEGRADOS: FuenteModelo[] = [
-  {
-    id: "sac",
-    etiqueta: "SAC",
-    descripcion: "Soft Actor-Critic · críticos cuantílicos TQC + encoder Conv1D/GRU",
-    color: "#2962ff",
-    transporte: "archivo",
-    url: "/estado_vivo.json",
-    adaptar: adaptarContratoEstandar,
-    // decide por cierre de vela 5m: los defaults le sirven tal cual
-  },
-  {
-    id: "ppo",
-    etiqueta: "PPO",
-    descripcion: "Proximal Policy Optimization · servicio en vivo por WebSocket",
-    color: "#ab47bc",
-    transporte: "websocket",
-    // opt-in: sin la variable de entorno, la fuente queda desactivada
-    url: process.env.NEXT_PUBLIC_FEED_VIVO_URL,
-    adaptar: adaptarFeedWebSocket,
-  },
-];
-
 /**
  * Modelos declarados por entorno, en `NEXT_PUBLIC_MODELOS_EXTRA`.
  *
@@ -69,7 +55,7 @@ const MODELOS_INTEGRADOS: FuenteModelo[] = [
  * ```jsonc
  * // .env.local  (todo en UNA línea)
  * NEXT_PUBLIC_MODELOS_EXTRA=[
- *   {"id":"dqn","etiqueta":"DQN","url":"/estado_vivo_dqn.json"},
+ *   {"id":"dqn","etiqueta":"DQN","url":"/estado_dqn.json"},
  *   {"id":"a2c","etiqueta":"A2C","transporte":"websocket",
  *    "url":"ws://127.0.0.1:8010/ws","color":"#ffa726","msFresco":60000}
  * ]
