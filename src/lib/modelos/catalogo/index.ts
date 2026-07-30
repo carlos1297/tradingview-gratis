@@ -1,6 +1,6 @@
 import { FUENTE_SAC } from "./sac/sac.fuente";
 import { FUENTE_PPO } from "./ppo/ppo.fuente";
-import type { FuenteModelo } from "../nucleo/tipos";
+import type { FuenteModelo } from "@/lib/modelos/nucleo";
 
 /**
  * catalogo/index.ts — Los modelos que vienen de fábrica con el visor.

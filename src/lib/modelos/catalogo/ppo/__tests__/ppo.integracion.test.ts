@@ -1,8 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { adaptarFeedWebSocket } from "../../../nucleo/adaptadores";
-import { posicionParaGrafico, saludMotor, vistaOperacion } from "../../../nucleo/derivar";
+import {
+  adaptarFeedWebSocket,
+  posicionParaGrafico,
+  saludMotor,
+  vistaOperacion,
+  type EstadoModeloIA,
+} from "@/lib/modelos/nucleo";
 import { fuentePorId } from "../../../registro";
-import type { EstadoModeloIA } from "../../../nucleo/tipos";
 import crudo from "./fixtures/estado_ppo_v1_ws.json";
 
 /**

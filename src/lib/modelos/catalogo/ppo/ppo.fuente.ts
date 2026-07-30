@@ -1,5 +1,4 @@
-import { adaptarFeedWebSocket } from "../../nucleo/adaptadores";
-import type { FuenteModelo } from "../../nucleo/tipos";
+import { adaptarFeedWebSocket, type FuenteModelo } from "@/lib/modelos/nucleo";
 
 /**
  * ppo.fuente.ts — Alta del modelo PPO en el visor.

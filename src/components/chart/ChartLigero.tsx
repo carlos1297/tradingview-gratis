@@ -11,6 +11,7 @@ import {
   CrosshairMode,
   LineStyle,
   TickMarkType,
+  type AutoscaleInfo,
   type IChartApi,
   type IPriceLine,
   type ISeriesApi,
@@ -25,12 +26,25 @@ import {
   COLOR_PERDIDA,
   pintarPosicion,
 } from "@/lib/chart/pintarPosicion";
+import {
+  difundirCrosshair,
+  esReflejo,
+  limpiarCrosshair,
+  registrarGrafico,
+} from "@/lib/chart/sincronizacion";
 import { fetchKlines } from "@/lib/binance/rest";
+import {
+  VELAS_POR_CARGA,
+  VELAS_PRIMERA_PINTADA,
+} from "@/lib/binance/temporalidades";
 import { getBinanceWS } from "@/lib/binance/ws";
 import {
   computeLiquidationHeatmap,
   crearImagenHeatmap,
+  heatRGBA,
+  perfilLiquidez,
   type LiquidationHeatmap,
+  type PerfilLiquidez,
 } from "@/lib/indicators/liquidations";
 import {
   computeVolumeProfile,
@@ -39,7 +53,11 @@ import {
 } from "@/lib/indicators/volumeProfile";
 import { AgregadorOrderFlow } from "@/lib/indicators/orderFlow";
 import { AgregadorFootprint } from "@/lib/indicators/footprint";
-import { buscarIndicador } from "@/lib/indicators/registro";
+import {
+  buscarIndicador,
+  type DefinicionIndicador,
+  type LineaReferencia,
+} from "@/lib/indicators/registro";
 import {
   pnlFlotante,
   posicionParaGrafico,
@@ -51,10 +69,20 @@ import { dibuja } from "@/lib/modelos/nucleo/visibilidad";
 import { fuentePorId } from "@/lib/modelos/registro";
 import { buscarHerramienta } from "@/lib/herramientas/registro";
 import type { Dibujo, PuntoResuelto } from "@/lib/herramientas/tipos";
-import { useChartStore } from "@/lib/store/chart-store";
+import {
+  encendido,
+  useChartStore,
+  type InstanciaIndicador,
+  type LiqHeatmapConfig,
+} from "@/lib/store/chart-store";
 import { useModeloActivo, useModelosDisponibles } from "@/lib/store/modelos-store";
 import type { Candle, Timeframe } from "@/lib/binance/types";
-import { formatPrice, formatPct, formatVolume } from "@/lib/format";
+import {
+  formatPrice,
+  formatPct,
+  formatPrecioEstable,
+  formatVolume,
+} from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /**
@@ -67,12 +95,27 @@ import { cn } from "@/lib/utils";
 interface Props {
   symbol: string;
   timeframe: Timeframe;
+  /**
+   * Id de la ventana del mosaico. Identifica a este gráfico en el registro de
+   * sincronización, para que el crosshair se refleje en las OTRAS ventanas y no
+   * en sí mismo. Sin él (uso suelto, fuera del mosaico) no se sincroniza.
+   */
+  ventanaId?: string;
   onTimeframeChange: (tf: Timeframe) => void;
   /** Mostrar la barra interna de timeframes (off cuando el marco de ventana ya la aporta) */
   mostrarBarraTF?: boolean;
 }
 
 const TIMEFRAMES_UI: Timeframe[] = ["1m", "5m", "15m", "1h", "4h", "1d", "1w"];
+
+/**
+ * Velas de aire entre la última vela y la escala de precios.
+ *
+ * Sin esto la vela en curso queda pegada al eje: `fitContent()` encuadra los
+ * datos EXACTOS, sin margen. TradingView siempre deja un hueco — se lee mejor
+ * y deja lugar para proyectar líneas a la derecha del precio.
+ */
+const MARGEN_DERECHO_BARRAS = 10;
 
 const SEGUNDOS_TF: Record<Timeframe, number> = {
   "1m": 60, "3m": 180, "5m": 300, "15m": 900, "30m": 1800,
@@ -81,6 +124,13 @@ const SEGUNDOS_TF: Record<Timeframe, number> = {
 };
 
 type SerieChart = ISeriesApi<"Line"> | ISeriesApi<"Histogram">;
+
+/** Traduce el estilo declarado por el registro al enum de lightweight-charts. */
+const ESTILO_ZONA: Record<NonNullable<LineaReferencia["estilo"]>, LineStyle> = {
+  solida: LineStyle.Solid,
+  guiones: LineStyle.Dashed,
+  punteada: LineStyle.Dotted,
+};
 
 type OHLC = { time: number; open: number; high: number; low: number; close: number };
 
@@ -114,6 +164,72 @@ function pintarLeyenda(el: HTMLDivElement | null, c: OHLC | undefined) {
     par("C", formatPrice(c.close)) +
     `<span style="margin-right:8px;color:${col}">${formatPct(pct)}</span>` +
     `<span style="color:#787b86">${fecha}</span>`;
+}
+
+/**
+ * Geometría del perfil de liquidez, guardada al dibujarlo.
+ *
+ * Se copia todo lo que hace falta para responder al puntero —bins, precios,
+ * anchos— en vez de volver a leer el heatmap: entre el dibujo y el movimiento
+ * del ratón la rejilla puede haberse recalculado, y la etiqueta estaría
+ * describiendo unas barras que ya no son las que se ven.
+ */
+interface GeometriaPerfil {
+  perfil: PerfilLiquidez;
+  /** Ancho de la banda de barras, en px. */
+  bandW: number;
+  /** Ancho del área de dibujo (sin la escala de precios), en px. */
+  plotW: number;
+  minPrice: number;
+  binSize: number;
+  bins: number;
+  maxIntensity: number;
+  /**
+   * El mismo filtro de ruido que se aplicó al dibujar.
+   *
+   * Va acá para que la etiqueta no describa una barra que no está: los niveles
+   * por debajo del umbral no se pintan, y sin esto el puntero igual devolvería
+   * su valor sobre un hueco vacío.
+   */
+  umbral: number;
+}
+
+/** Lectura de una barra del perfil, bajo el puntero. */
+type VistaPerfil = {
+  precio: number;
+  /** Intensidad del nivel, en unidades del activo base. */
+  valor: number;
+  /** Fracción del máximo del perfil (0..1): qué tan grande es esta barra. */
+  fraccion: number;
+  color: string;
+  /** "BTC", "ETH"… para rotular la magnitud. */
+  base: string;
+};
+
+/**
+ * Pinta la etiqueta del perfil de liquidez junto a la barra señalada.
+ *
+ * Mismo criterio que `pintarLeyenda` y `pintarOrderFlow`: DOM directo desde el
+ * callback del crosshair, que dispara decenas de veces por segundo. Con estado
+ * de React, cada movimiento del ratón volvería a renderizar el chart entero.
+ */
+function pintarPerfilLiquidez(el: HTMLDivElement | null, l: VistaPerfil | null) {
+  if (!el) return;
+  if (!l) {
+    el.style.display = "none";
+    return;
+  }
+  el.style.display = "flex";
+  const par = (etq: string, val: string, col = "#d1d4dc") =>
+    `<span style="margin-left:8px"><span style="color:#787b86">${etq}</span> <span style="color:${col}">${val}</span></span>`;
+  el.innerHTML =
+    `<span style="flex:none;width:8px;height:8px;border-radius:2px;background:${l.color}"></span>` +
+    `<span style="margin-left:8px;color:#d1d4dc">${formatPrecioEstable(l.precio)}</span>` +
+    // «≈» porque el heatmap ESTIMA las liquidaciones a partir de las velas: no
+    // es un dato de posiciones reales y la etiqueta no debe sugerir que lo es.
+    par("≈", `${formatVolume(l.valor)} ${l.base}`) +
+    par("", `$${formatVolume(l.valor * l.precio)}`) +
+    par("", `${Math.round(l.fraccion * 100)}%`, "#787b86");
 }
 
 /** Datos del readout de Order Flow (vela en curso + CVD acumulado). */
@@ -224,6 +340,7 @@ function recordarVelas(clave: string, velas: Candle[]) {
 export function ChartLigero({
   symbol,
   timeframe,
+  ventanaId,
   onTimeframeChange,
   mostrarBarraTF = true,
 }: Props) {
@@ -237,6 +354,8 @@ export function ChartLigero({
   const ultimoDibujoRef = useRef<string | null>(null);
   /** Series creadas por indicador activo (id → series en el chart) */
   const seriesIndicadoresRef = useRef<Map<string, SerieChart[]>>(new Map());
+  /** Zonas de cada instancia (id → priceLines), para poder rehacerlas al editar */
+  const zonasIndicadoresRef = useRef<Map<string, IPriceLine[]>>(new Map());
   /** Leyenda OHLC flotante que sigue el cursor */
   const leyendaRef = useRef<HTMLDivElement>(null);
   /** Carga perezosa de historial hacia atrás (scroll infinito) */
@@ -245,7 +364,7 @@ export function ChartLigero({
   const claveDatosRef = useRef("");
   /** Clave de caché vigente (símbolo|timeframe[|backtest]) para velas y rango */
   const cacheKeyRef = useRef("");
-  const cargarMasHistorialRef = useRef<() => void>(() => {});
+  const cargarMasHistorialRef = useRef<(cuantas?: number) => void>(() => {});
   /** El cursor está sobre una vela: no pisar la leyenda con el tick del WS */
   const crosshairActivoRef = useRef(false);
   /** Volume Profile Visible Range */
@@ -255,6 +374,9 @@ export function ChartLigero({
   const dibujoPendienteVpvrRef = useRef(false);
   /** Readout en vivo de Order Flow (DOM directo, sin re-render) */
   const ofReadoutRef = useRef<HTMLDivElement>(null);
+  /** Perfil lateral de liquidez: geometría dibujada + su etiqueta al pasar el ratón */
+  const perfilLiqRef = useRef<GeometriaPerfil | null>(null);
+  const perfilLiqReadoutRef = useRef<HTMLDivElement>(null);
   /** Footprint (Bid×Ask por nivel dentro de cada vela) */
   const canvasFootprintRef = useRef<HTMLCanvasElement>(null);
   const agregadorFpRef = useRef<AgregadorFootprint | null>(null);
@@ -303,6 +425,10 @@ export function ChartLigero({
   heatmapActivoRef.current = heatmapActivo;
   const liqConfigRef = useRef(liqConfig);
   liqConfigRef.current = liqConfig;
+  // Misma razón: la etiqueta del perfil rotula la magnitud con el activo base
+  // ("BTC"), y el handler del crosshair capturaría el par del primer render.
+  const simboloRef = useRef(symbol);
+  simboloRef.current = symbol;
   const vpvrActivoRef = useRef(vpvrActivo);
   vpvrActivoRef.current = vpvrActivo;
   const vpvrConfigRef = useRef(vpvrConfig);
@@ -406,6 +532,12 @@ export function ChartLigero({
   // componente (chart + series + indicadores + 4 canvas) se re-renderizaba una
   // vez por segundo y por ventana sin necesidad.
   const precioMercadoRef = usePrecioMercadoRef(estadoModelo?.simbolo ?? symbol);
+  // Interruptor de sincronización, en ref: el handler de crosshair se crea una
+  // sola vez al montar el chart, y meterlo en sus dependencias obligaría a
+  // recrear el gráfico entero cada vez que se toca la casilla.
+  const sincronizarCrosshair = useChartStore((s) => s.sincronizarCrosshair);
+  const sincronizarRef = useRef(sincronizarCrosshair);
+  sincronizarRef.current = sincronizarCrosshair;
 
   // ── Crear el chart (una vez) ────────────────────────────────────────
   useEffect(() => {
@@ -438,6 +570,10 @@ export function ChartLigero({
         timeVisible: true,
         secondsVisible: false,
         tickMarkFormatter: formatoTickLocal,
+        // Mantiene el hueco mientras el gráfico avanza en vivo. No afecta a
+        // `fitContent()`, que encuadra los datos exactos: el encuadre inicial
+        // lo hace `encuadrarConMargen()`.
+        rightOffset: MARGEN_DERECHO_BARRAS,
       },
       crosshair: {
         // modo Normal (libre): la línea horizontal y su etiqueta de precio
@@ -467,6 +603,11 @@ export function ChartLigero({
     chartRef.current = chart;
     serieRef.current = serie;
     markersRef.current = createSeriesMarkers(serie, []);
+    // Alta en el registro de sincronización. La baja va en el cleanup de este
+    // mismo efecto, más abajo.
+    const bajaSincronizacion = ventanaId
+      ? registrarGrafico(ventanaId, { chart, serie })
+      : null;
 
     chart.timeScale().subscribeVisibleLogicalRangeChange((rango) => {
       solicitarDibujoHeatmap();
@@ -541,6 +682,23 @@ export function ChartLigero({
       }
 
       const data = param.time ? param.seriesData.get(serieActual) : undefined;
+
+      // Reflejar la posición en las demás ventanas.
+      //
+      // `esReflejo()` corta el bucle: cuando este movimiento LO CAUSÓ otra
+      // ventana, no se re-emite. Sin ese guardia dos gráficos se rebotarían el
+      // evento indefinidamente.
+      if (ventanaId && sincronizarRef.current && !esReflejo()) {
+        if (param.point && param.time !== undefined) {
+          const precio = serieActual.coordinateToPrice(param.point.y);
+          if (precio !== null && isFinite(precio)) {
+            difundirCrosshair(ventanaId, param.time, precio);
+          }
+        } else {
+          limpiarCrosshair(ventanaId); // el cursor salió del gráfico
+        }
+      }
+
       if (data && "close" in data && param.time !== undefined) {
         const d = data as unknown as {
           open: number;
@@ -561,11 +719,22 @@ export function ChartLigero({
         const velas = velasRef.current;
         pintarLeyenda(leyendaRef.current, velas[velas.length - 1]);
       }
+
+      // Etiqueta del perfil de liquidez: solo cuando el puntero está DENTRO de
+      // la banda de barras. Se engancha acá y no con un listener propio porque
+      // el lienzo tiene `pointer-events-none` a propósito: los eventos son del
+      // chart, que ya hace el pan y el zoom.
+      leerPerfilLiquidez(param.point, param.paneIndex);
     });
 
     const seriesIndicadores = seriesIndicadoresRef.current;
+    const zonasIndicadores = zonasIndicadoresRef.current;
     return () => {
+      // Primero la baja: si el gráfico sale del registro después de
+      // `chart.remove()`, una difusión en curso le hablaría a un chart destruido.
+      bajaSincronizacion?.();
       seriesIndicadores.clear();
+      zonasIndicadores.clear();
       markersRef.current = null;
       serieRef.current = null;
       chartRef.current = null;
@@ -668,6 +837,27 @@ export function ChartLigero({
     // pinta las velas (de la red o del caché). `restaurar` solo en cache-hit:
     // ahí el rango guardado corresponde a estos mismos datos; en un fetch nuevo
     // se usa fitContent (evita aplicar un rango viejo a datos distintos).
+    /**
+     * Encuadra las velas cargadas DEJANDO el hueco de la derecha.
+     *
+     * `fitContent()` no sirve: encuadra los datos exactos e ignora
+     * `rightOffset`, así que la última vela quedaba pegada al eje. Los índices
+     * lógicos más allá de los datos son válidos y se dibujan como espacio
+     * vacío, así que esto encuadra y deja el aire en una sola llamada.
+     */
+    const encuadrarConMargen = (velas: Candle[]) => {
+      const ts = chartRef.current?.timeScale();
+      if (!ts) return;
+      if (velas.length === 0) {
+        ts.fitContent();
+        return;
+      }
+      ts.setVisibleLogicalRange({
+        from: 0,
+        to: velas.length - 1 + MARGEN_DERECHO_BARRAS,
+      });
+    };
+
     const aplicar = (velas: Candle[], restaurar: boolean) => {
       const s = serieRef.current;
       if (!s) return;
@@ -718,10 +908,10 @@ export function ChartLigero({
         if (desde < hasta) {
           ts?.setVisibleRange({ from: desde as UTCTimestamp, to: hasta as UTCTimestamp });
         } else {
-          ts?.fitContent(); // las señales no se solapan con lo cargado
+          encuadrarConMargen(velas); // las señales no se solapan con lo cargado
         }
       } else {
-        ts?.fitContent();
+        encuadrarConMargen(velas);
       }
     };
 
@@ -730,11 +920,32 @@ export function ChartLigero({
       // re-monte por cambio de layout: restaurar al instante, sin refetch.
       // copia propia: dos ventanas del mismo par no comparten el arreglo mutable.
       aplicar(cached.slice(), true);
-    } else {
-      fetchKlines(symbol, timeframe, 1000, finMs)
+    } else if (finMs !== undefined) {
+      // BACKTEST: un pedido único y completo. Acá el objetivo es ver un período
+      // ancho de una vez, el encuadre se acota a las velas cargadas (así que
+      // arrancar con 120 estrecharía la vista) y cargar señales es una acción
+      // deliberada donde la latencia no molesta.
+      fetchKlines(symbol, timeframe, VELAS_POR_CARGA, finMs)
         .then((velas) => {
           if (cancelado || !serieRef.current) return;
           aplicar(velas, false);
+        })
+        .catch(console.error);
+    } else {
+      // EN VIVO: carga progresiva. Se pintan las primeras velas cuanto antes y
+      // el resto llega en segundo plano — el usuario ve el gráfico sin esperar
+      // las 1000, que además vendrían comprimidas a menos de un píxel cada una.
+      fetchKlines(symbol, timeframe, VELAS_PRIMERA_PINTADA)
+        .then((velas) => {
+          if (cancelado || !serieRef.current) return;
+          aplicar(velas, false);
+          // Completar hasta VELAS_POR_CARGA con la MISMA función del scroll
+          // infinito: antepone el lote, corre el rango visible por las velas
+          // añadidas (así la vista no salta) y recalcula heatmap, indicadores
+          // y marcadores. De acá sale la EMA 200, que con 120 velas no se
+          // puede calcular y aparece sola al llegar el lote.
+          const faltan = VELAS_POR_CARGA - velas.length;
+          if (faltan > 0) void cargarMasHistorialRef.current(faltan);
         })
         .catch(console.error);
     }
@@ -787,48 +998,163 @@ export function ChartLigero({
   }, [symbol, timeframe, modelSignals]);
 
   // ── Indicadores del registro (escalable: ver lib/indicators/registro) ──
+
+  /**
+   * Rehace las zonas (líneas de referencia) de una instancia.
+   *
+   * Dos cosas, las dos genéricas: las líneas en sí —priceLines nativas, que
+   * heredan el zoom y la tipografía del panel— y el estirado de la escala para
+   * que se vean siempre. Sin lo segundo, un RSI que se mueve entre 40 y 60
+   * dejaría sus zonas de 70 y 30 fuera de cuadro justo cuando importan.
+   *
+   * Se llama también cuando cambian los parámetros: una priceLine no se puede
+   * mover, así que se tira y se crea de nuevo (son dos por instancia; el costo
+   * es irrelevante y solo ocurre al editar).
+   */
+  function sincronizarZonas(inst: InstanciaIndicador, def: DefinicionIndicador, series: SerieChart[]) {
+    const serie = series[0];
+    if (!serie) return;
+
+    const previas = zonasIndicadoresRef.current.get(inst.id);
+    if (previas) {
+      for (const linea of previas) {
+        try {
+          serie.removePriceLine(linea);
+        } catch {}
+      }
+      zonasIndicadoresRef.current.delete(inst.id);
+    }
+
+    const zonas = def.referencias?.(inst.params) ?? [];
+    if (zonas.length === 0) {
+      // Un proveedor neutro y no `undefined`: el `merge` de lightweight-charts
+      // IGNORA las claves undefined, así que borrar la opción no la borraría.
+      // Devolver la escala base es exactamente lo mismo que no tener proveedor.
+      serie.applyOptions({
+        autoscaleInfoProvider: (original: () => AutoscaleInfo | null) => original(),
+      });
+      return;
+    }
+
+    zonasIndicadoresRef.current.set(
+      inst.id,
+      zonas.map((z) =>
+        serie.createPriceLine({
+          price: z.valor,
+          color: z.color,
+          lineWidth: 1,
+          lineStyle: ESTILO_ZONA[z.estilo ?? "guiones"],
+          // El valor ya se lee en el rótulo dentro del panel; repetirlo en el
+          // eje solo compite con la etiqueta del propio indicador.
+          axisLabelVisible: false,
+          title: z.etiqueta ?? "",
+        }),
+      ),
+    );
+
+    const valores = zonas.map((z) => z.valor);
+    const minZona = Math.min(...valores);
+    const maxZona = Math.max(...valores);
+    serie.applyOptions({
+      // El tipo va explícito: `serie` es la unión Línea|Histograma y TypeScript
+      // no infiere el parámetro de un callback a través de una llamada así.
+      autoscaleInfoProvider: (original: () => AutoscaleInfo | null) => {
+        const info = original();
+        if (!info?.priceRange) return info;
+        return {
+          ...info,
+          priceRange: {
+            minValue: Math.min(info.priceRange.minValue, minZona),
+            maxValue: Math.max(info.priceRange.maxValue, maxZona),
+          },
+        };
+      },
+    });
+  }
+
   function sincronizarIndicadores() {
     const chart = chartRef.current;
     if (!chart) return;
     const mapa = seriesIndicadoresRef.current;
+    const vigentes = new Set(indicadoresActivos.map((i) => i.id));
 
-    // quitar los desactivados (los paneles vacíos se eliminan solos)
+    // quitar las instancias que ya no están (los paneles vacíos se eliminan solos)
     for (const [id, series] of [...mapa]) {
-      if (indicadoresActivos.includes(id)) continue;
+      if (vigentes.has(id)) continue;
       for (const s of series) {
         try {
           chart.removeSeries(s);
         } catch {}
       }
       mapa.delete(id);
+      // Las priceLines mueren con su serie; acá solo se suelta la referencia.
+      zonasIndicadoresRef.current.delete(id);
     }
 
-    // crear los nuevos
-    for (const id of indicadoresActivos) {
-      if (mapa.has(id)) continue;
-      const def = buscarIndicador(id);
+    for (const inst of indicadoresActivos) {
+      const def = buscarIndicador(inst.definicionId);
       if (!def) continue;
-      // todas las series del indicador comparten el mismo panel
+      const metas = def.series(inst.params);
+      const existentes = mapa.get(inst.id);
+
+      if (existentes) {
+        // Ya está en el gráfico: aplicar el color SIN recrear la serie.
+        //
+        // Recrearla perdería su estado visual y, con `panelPropio`, agregaría un
+        // panel de más en cada cambio de color. El color antes se fijaba una
+        // única vez al crear la serie, así que editarlo no se veía.
+        if (existentes.length === metas.length) {
+          metas.forEach((m, i) => existentes[i]?.applyOptions({ color: m.color }));
+          // Los niveles y el color de las zonas también son parámetros: editar
+          // «Sobrecompra» tiene que verse sin recrear la serie, igual que el color.
+          sincronizarZonas(inst, def, existentes);
+          continue;
+        }
+        // Cambió la CANTIDAD de series (ningún indicador de hoy lo hace, pero
+        // uno futuro podría): recrear de cero.
+        for (const s of existentes) {
+          try {
+            chart.removeSeries(s);
+          } catch {}
+        }
+        mapa.delete(inst.id);
+      }
+
+      // todas las series de la instancia comparten el mismo panel
       const paneIndex = def.panelPropio ? chart.panes().length : 0;
-      const series: SerieChart[] = def.series.map((sd) =>
-        sd.tipo === "linea"
+      // El recuadro de valor sobre la escala de precios se muestra SOLO a los
+      // indicadores con panel propio.
+      //
+      // Un indicador superpuesto al precio (las EMAs) comparte el eje con la
+      // vela y con la posición del modelo: con tres EMAs activas eran tres
+      // recuadros de colores apilados encima de la entrada, el SL y el TP, y el
+      // eje quedaba ilegible. En un panel propio, en cambio, esa etiqueta es la
+      // ÚNICA referencia de en qué valor está la serie, así que se queda.
+      //
+      // La regla sale de `panelPropio`, que el registro ya declara: un indicador
+      // nuevo hereda el criterio sin configuración extra.
+      const lastValueVisible = def.panelPropio;
+      const series: SerieChart[] = metas.map((m) =>
+        m.tipo === "linea"
           ? chart.addSeries(
               LineSeries,
               {
-                color: sd.color,
+                color: m.color,
                 lineWidth: 2,
                 priceLineVisible: false,
+                lastValueVisible,
                 crosshairMarkerVisible: false,
               },
               paneIndex,
             )
           : chart.addSeries(
               HistogramSeries,
-              { color: sd.color, priceLineVisible: false },
+              { color: m.color, priceLineVisible: false, lastValueVisible },
               paneIndex,
             ),
       );
-      mapa.set(id, series);
+      mapa.set(inst.id, series);
+      sincronizarZonas(inst, def, series);
     }
 
     // el panel del precio siempre más alto que los de indicadores
@@ -839,15 +1165,24 @@ export function ChartLigero({
     recalcularIndicadores();
   }
 
+  /**
+   * Recalcula TODAS las series de cada instancia con UNA sola llamada a
+   * `calcular`, y reparte el resultado.
+   *
+   * Antes `calcular` era por serie, así que el MACD —que tiene tres— repetía su
+   * cálculo tres veces: 0.74 de los 0.87 ms de todos los indicadores juntos.
+   */
   function recalcularIndicadores() {
     const velas = velasRef.current;
     if (velas.length === 0) return;
-    for (const [id, series] of seriesIndicadoresRef.current) {
-      const def = buscarIndicador(id);
-      if (!def) continue;
-      def.series.forEach((sd, i) => {
+    for (const inst of indicadoresActivos) {
+      const series = seriesIndicadoresRef.current.get(inst.id);
+      const def = buscarIndicador(inst.definicionId);
+      if (!series || !def) continue;
+      const porSerie = def.calcular(velas, inst.params);
+      porSerie.forEach((puntos, i) => {
         series[i]?.setData(
-          sd.calcular(velas).map((p) => ({
+          puntos.map((p) => ({
             time: p.time as UTCTimestamp,
             value: p.value,
             color: p.color,
@@ -861,11 +1196,13 @@ export function ChartLigero({
   function actualizarUltimoPuntoIndicadores() {
     const velas = velasRef.current;
     if (velas.length === 0) return;
-    for (const [id, series] of seriesIndicadoresRef.current) {
-      const def = buscarIndicador(id);
-      if (!def) continue;
-      def.series.forEach((sd, i) => {
-        const puntos = sd.calcular(velas);
+    for (const inst of indicadoresActivos) {
+      const series = seriesIndicadoresRef.current.get(inst.id);
+      const def = buscarIndicador(inst.definicionId);
+      if (!series || !def) continue;
+      // Una sola llamada por instancia, igual que en el recálculo completo.
+      const porSerie = def.calcular(velas, inst.params);
+      porSerie.forEach((puntos, i) => {
         const ultimo = puntos[puntos.length - 1];
         if (!ultimo) return;
         series[i]?.update({
@@ -898,22 +1235,34 @@ export function ChartLigero({
   }, [indicadoresActivos]);
 
   // ── Scroll infinito: cargar el lote anterior de historial ──────────
-  async function cargarMasHistorial() {
+  /**
+   * Trae el lote de historial ANTERIOR al primero que hay cargado.
+   *
+   * `cuantas` permite pedir solo lo que falta: la primera pintada carga
+   * `VELAS_PRIMERA_PINTADA` para dibujar cuanto antes y después completa el
+   * resto con esta misma función, sin lógica de red aparte. Sin argumento pide
+   * un lote entero, que es lo que hace el scroll infinito.
+   */
+  async function cargarMasHistorial(cuantas: number = VELAS_POR_CARGA) {
     const chart = chartRef.current;
     const serie = serieRef.current;
     if (!chart || !serie) return;
     if (cargandoHistorialRef.current || sinMasHistorialRef.current) return;
     if (velasRef.current.length === 0) return;
+    if (cuantas <= 0) return;
 
     cargandoHistorialRef.current = true;
     const clave = claveDatosRef.current;
     try {
       const finMs = velasRef.current[0].time * 1000 - 1;
-      const previas = await fetchKlines(symbol, timeframe, 1000, finMs);
+      const previas = await fetchKlines(symbol, timeframe, cuantas, finMs);
       // el par/timeframe cambió mientras se pedía: descartar la respuesta
       if (claveDatosRef.current !== clave || !serieRef.current) return;
       const nuevas = previas.filter((v) => v.time < velasRef.current[0].time);
-      if (previas.length < 1000 || nuevas.length === 0)
+      // Binance devolvió menos de lo pedido: no hay más historial. Se compara
+      // contra `cuantas`, no contra la constante — con un pedido parcial (la
+      // completación de la primera pintada) 880 de 880 NO significa agotado.
+      if (previas.length < cuantas || nuevas.length === 0)
         sinMasHistorialRef.current = true; // se agotó el historial del par
       if (nuevas.length === 0) return;
 
@@ -1086,6 +1435,7 @@ export function ChartLigero({
     const velas = velasRef.current;
     if (!heatmap || velas.length < 2 || !heatmapActivoRef.current) {
       ultimoDibujoRef.current = null;
+      olvidarPerfilLiquidez();
       prepararLienzo();
       return;
     }
@@ -1113,12 +1463,6 @@ export function ChartLigero({
     prepararLienzo();
 
     const cfg = liqConfigRef.current;
-    const imagen = crearImagenHeatmap(heatmap, desdeIdx, hastaIdx, {
-      umbral: cfg.umbral,
-      opacidad: cfg.opacidad,
-    });
-    if (!imagen) return;
-
     // limitar el dibujo al panel del precio (el primero)
     const anchoPlot = chart.timeScale().width();
     const altoPlot = chart.paneSize().height;
@@ -1127,10 +1471,148 @@ export function ChartLigero({
     ctx.beginPath();
     ctx.rect(0, 0, anchoPlot, altoPlot);
     ctx.clip();
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(imagen, xIni, yTop, Math.max(1, xFin - xIni), yBottom - yTop);
+
+    // Capa 1: los bloques sobre el gráfico (dónde está la liquidez en el tiempo)
+    if (encendido(cfg.mostrarBloques)) {
+      const imagen = crearImagenHeatmap(heatmap, desdeIdx, hastaIdx, {
+        umbral: cfg.umbral,
+        opacidad: cfg.opacidad,
+      });
+      if (imagen) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(imagen, xIni, yTop, Math.max(1, xFin - xIni), yBottom - yTop);
+      }
+    }
+
+    // Capa 2: el perfil lateral (cuánta liquidez hay en cada precio, AHORA)
+    if (encendido(cfg.mostrarPerfil)) {
+      dibujarPerfilLiquidez(ctx, heatmap, hastaIdx, anchoPlot, altoPlot, cfg);
+    } else {
+      olvidarPerfilLiquidez();
+    }
+
     ctx.restore();
+  }
+
+  /**
+   * Barras horizontales contra la escala de precios: el heatmap visto de
+   * perfil. Se dibuja en el MISMO lienzo que los bloques —comparte el
+   * coalescing por frame y el intervalo que ya cubre autoscale y resize— y deja
+   * su geometría en `perfilLiqRef` para que el puntero no recalcule nada.
+   */
+  function dibujarPerfilLiquidez(
+    ctx: CanvasRenderingContext2D,
+    heatmap: LiquidationHeatmap,
+    columna: number,
+    anchoPlot: number,
+    altoPlot: number,
+    cfg: LiqHeatmapConfig,
+  ) {
+    const serie = serieRef.current;
+    const perfil = perfilLiquidez(heatmap, columna);
+    if (!serie || !perfil) {
+      olvidarPerfilLiquidez();
+      return;
+    }
+
+    const { minPrice, binSize, bins, maxIntensity } = heatmap;
+    const bandW = Math.max(40, anchoPlot * (cfg.anchoPerfilPct ?? 0.12));
+    const op = Math.max(0, Math.min(1, cfg.opacidad));
+
+    for (let b = 0; b < bins; b++) {
+      const v = perfil.valores[b];
+      if (v <= 0) continue;
+      // El COLOR se normaliza con el máximo global, para que una barra se lea
+      // igual que el bloque del mismo nivel; el LARGO, con el máximo de la
+      // columna, para que el perfil siempre ocupe la banda entera.
+      const v01 = Math.min(1, v / maxIntensity);
+      if (v01 < cfg.umbral) continue; // mismo filtro de ruido que los bloques
+      const yA = serie.priceToCoordinate(minPrice + (b + 1) * binSize);
+      const yB = serie.priceToCoordinate(minPrice + b * binSize);
+      if (yA === null || yB === null) continue;
+      const y = Math.min(yA, yB);
+      const alto = Math.max(1, Math.abs(yB - yA));
+      const largo = Math.max(1, (v / perfil.max) * bandW);
+      const [r, g, bl] = heatRGBA(v01);
+      // Alfa propio, más sólido que el de los bloques: una barra corta sobre
+      // las velas tiene que leerse, y acá no hay riesgo de tapar el precio.
+      ctx.fillStyle = `rgba(${r},${g},${bl},${(op * (0.55 + 0.45 * v01)).toFixed(3)})`;
+      ctx.fillRect(anchoPlot - largo, y, largo, alto);
+    }
+
+    // Borde izquierdo de la banda: delimita el panel sin oscurecer las velas.
+    ctx.strokeStyle = "rgba(120,123,134,0.35)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(anchoPlot - bandW + 0.5, 0);
+    ctx.lineTo(anchoPlot - bandW + 0.5, altoPlot);
+    ctx.stroke();
+
+    perfilLiqRef.current = {
+      perfil,
+      bandW,
+      plotW: anchoPlot,
+      minPrice,
+      binSize,
+      bins,
+      maxIntensity,
+      umbral: cfg.umbral,
+    };
+  }
+
+  /** El perfil deja de existir: sin geometría no hay etiqueta que mostrar. */
+  function olvidarPerfilLiquidez() {
+    perfilLiqRef.current = null;
+    pintarPerfilLiquidez(perfilLiqReadoutRef.current, null);
+  }
+
+  /**
+   * Traduce la posición del puntero a la barra del perfil que hay debajo y
+   * publica su etiqueta. Fuera de la banda, o sin perfil dibujado, la esconde.
+   */
+  function leerPerfilLiquidez(punto: { x: number; y: number } | undefined, panel?: number) {
+    const el = perfilLiqReadoutRef.current;
+    const geo = perfilLiqRef.current;
+    const serie = serieRef.current;
+    // `paneIndex` distinto de 0 es un panel de indicador (RSI, MACD…): ahí el
+    // eje no es el del precio y traducir la `y` daría un nivel inventado.
+    if (!el || !geo || !serie || !punto || (panel ?? 0) !== 0) {
+      pintarPerfilLiquidez(el, null);
+      return;
+    }
+    if (punto.x < geo.plotW - geo.bandW || punto.x > geo.plotW) {
+      pintarPerfilLiquidez(el, null);
+      return;
+    }
+    const precio = serie.coordinateToPrice(punto.y);
+    if (precio === null || !isFinite(precio)) {
+      pintarPerfilLiquidez(el, null);
+      return;
+    }
+    const b = Math.floor((precio - geo.minPrice) / geo.binSize);
+    const valor = b >= 0 && b < geo.bins ? geo.perfil.valores[b] : 0;
+    const v01 = Math.min(1, valor / geo.maxIntensity);
+    // El mismo corte que el dibujo: solo se etiqueta lo que se ve.
+    if (valor <= 0 || v01 < geo.umbral) {
+      pintarPerfilLiquidez(el, null);
+      return;
+    }
+
+    // La etiqueta se ancla a la izquierda de la banda y sigue la altura del
+    // cursor: pegada a la barra que describe, sin taparla.
+    el.style.left = `${geo.plotW - geo.bandW - 8}px`;
+    el.style.top = `${punto.y}px`;
+    // Muestra de color opaca: `heatColor` lleva el alfa de la rampa (0.14–0.64),
+    // pensado para teñir el gráfico, y sobre el fondo del recuadro se vería gris.
+    const [cr, cg, cb] = heatRGBA(v01);
+    pintarPerfilLiquidez(el, {
+      precio: geo.minPrice + (b + 0.5) * geo.binSize,
+      valor,
+      fraccion: valor / geo.perfil.max,
+      color: `rgb(${cr},${cg},${cb})`,
+      base: simboloRef.current.replace(/(USDT|USDC|BUSD|FDUSD|BTC|ETH)$/, "") || simboloRef.current,
+    });
   }
 
   useEffect(() => {
@@ -1905,6 +2387,15 @@ export function ChartLigero({
           ref={leyendaRef}
           data-label="grafico-leyenda-ohlc"
           className="pointer-events-none absolute left-2 top-2 z-[6] hidden items-center whitespace-nowrap rounded bg-tv-bg/70 px-2 py-1 text-[11px] tabular-nums backdrop-blur-sm"
+        />
+        {/* Etiqueta del perfil de liquidez. `left`/`top` los fija el handler del
+            crosshair; el translate la ancla por su borde derecho a la altura del
+            cursor, para que quede junto a la barra sin taparla. */}
+        <div
+          ref={perfilLiqReadoutRef}
+          data-label="grafico-lectura-perfil-liquidez"
+          style={{ transform: "translate(-100%, -50%)" }}
+          className="pointer-events-none absolute z-[8] hidden items-center whitespace-nowrap rounded border border-tv-border bg-tv-bg/90 px-2 py-1 text-[11px] tabular-nums backdrop-blur-sm"
         />
         <div
           ref={ofReadoutRef}

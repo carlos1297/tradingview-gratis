@@ -131,6 +131,7 @@ export function VentanaFrame({ ventana, symbol, maximizada, puedeCerrar }: Props
         <ChartLigero
           symbol={symbol}
           timeframe={ventana.timeframe}
+          ventanaId={ventana.id}
           onTimeframeChange={(tf) => setTf(ventana.id, tf)}
           mostrarBarraTF={false}
         />

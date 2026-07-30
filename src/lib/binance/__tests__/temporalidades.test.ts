@@ -4,6 +4,7 @@ import {
   ms_queAbarca,
   temporalidadParaPeriodo,
   VELAS_POR_CARGA,
+  VELAS_PRIMERA_PINTADA,
 } from "../temporalidades";
 
 const DIA = 86_400_000;
@@ -66,5 +67,49 @@ describe("temporalidadParaPeriodo", () => {
 
   test("VELAS_POR_CARGA es el tope real de la API de Binance", () => {
     expect(VELAS_POR_CARGA).toBe(1000);
+  });
+});
+
+/**
+ * Carga progresiva: el gráfico pinta `VELAS_PRIMERA_PINTADA` para aparecer
+ * cuanto antes y completa el resto en segundo plano con la misma función del
+ * scroll infinito.
+ */
+describe("velas de la primera pintada", () => {
+  test("son menos que una carga completa, o la completación pediría cero", () => {
+    expect(VELAS_PRIMERA_PINTADA).toBeGreaterThan(0);
+    expect(VELAS_PRIMERA_PINTADA).toBeLessThan(VELAS_POR_CARGA);
+  });
+
+  test("el faltante a completar es el resto exacto", () => {
+    const faltan = VELAS_POR_CARGA - VELAS_PRIMERA_PINTADA;
+    expect(faltan).toBeGreaterThan(0);
+    expect(VELAS_PRIMERA_PINTADA + faltan).toBe(VELAS_POR_CARGA);
+  });
+
+  test("alcanzan para llenar una pantalla con velas legibles", () => {
+    // ~900 px de ancho útil: con 120 velas son ~7 px por vela (se distingue el
+    // cuerpo de la mecha). Con las 1000 de antes eran menos de 1 px.
+    expect(900 / VELAS_PRIMERA_PINTADA).toBeGreaterThan(4);
+  });
+
+  test("no alcanzan para una EMA 200: por eso la completación es automática", () => {
+    // `ema()` devuelve vacío si hay menos velas que su período. Si algún día
+    // este test falla porque VELAS_PRIMERA_PINTADA subió por encima de 200, la
+    // completación deja de ser necesaria para que la EMA 200 aparezca.
+    expect(VELAS_PRIMERA_PINTADA).toBeLessThan(200);
+  });
+});
+
+describe("la primera pintada NO afecta al dimensionado de períodos", () => {
+  test("ms_queAbarca sigue midiendo una carga COMPLETA", () => {
+    // Se completa hasta VELAS_POR_CARGA, así que lo que abarca una ventana no
+    // cambió: si esto usara VELAS_PRIMERA_PINTADA, cargar un backtest elegiría
+    // una temporalidad 8 veces más gruesa de la necesaria.
+    expect(ms_queAbarca("15m")).toBe(15 * 60_000 * VELAS_POR_CARGA);
+  });
+
+  test("un backtest de 249 días sigue eligiendo 6h", () => {
+    expect(temporalidadParaPeriodo(249 * DIA)).toBe("6h");
   });
 });

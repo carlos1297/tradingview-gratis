@@ -27,21 +27,36 @@ expone un servicio que empuja su estado por WebSocket.
 4. **Reconexión sola** con backoff 1 s → 10 s. Un servicio que todavía carga
    TensorFlow, o un replay que reinicia entre pasadas, no dejan el modelo caído.
 
+## Probarlo sin modelo entrenado
+
+El motor tiene un **modo demostración** que no necesita checkpoint, dataset ni
+TensorFlow: el mismo motor de paper trading (simulador con comisiones, SL/TP,
+liquidación y el contrato v1) corriendo sobre un mercado sintético y una
+política de juguete. Sirve para ver la integración completa —barra, caja en el
+gráfico, flechas, Probador— antes de que exista un modelo.
+
+```bash
+# en el repo RL_PPO (proyecto aparte):
+./ejecutar.py --demo          # levanta el feed + este visor y los conecta
+```
+
+En el panel aparece como **PPO · demo**, con `checkpoint` en «—»: es la señal de
+que no hay modelo entrenado detrás y los resultados no significan nada. Detalle
+en `modelo_PPO/demo_feed.py` de ese repo.
+
 ## Archivos de este modelo
 
 ```
 ppo.fuente.ts                        el alta en el visor
-ppo.feed.ts                          envoltorio de compatibilidad del cliente WS
 ppo.README.md                        este archivo
 __tests__/ppo.integracion.test.ts    contrato ejecutable
 __tests__/fixtures/estado_ppo_v1_ws.json
 ```
 
-`ppo.feed.ts` existía como `lib/liveFeed.ts` y era la API pública del cliente
-WebSocket del servicio. Se conserva porque puede estar importado desde fuera,
-pero **delega en `nucleo/transportes/websocket.ts`**: no hay dos
-implementaciones. Código nuevo no debería usarlo — alcanza con la entrada del
-catálogo.
+Eso es **todo** lo que el visor sabe de PPO: no hay adaptador propio ni cliente
+WebSocket a medida. El transporte lo pone `nucleo/transportes/websocket.ts` y la
+traducción `nucleo/adaptadores.ts`, los mismos que usaría cualquier otro motor
+que hable el contrato v1.
 
 ## Ver también
 

@@ -229,7 +229,7 @@ print('✅ contrato v1 OK')"
 curl -s localhost:3000/estado_dqn.json | head -c 200
 
 # 4. nada se rompió
-bun run verificar     # tsc + eslint + 86 tests
+bun run verificar     # tsc + eslint + 223 tests
 ```
 
 En la pantalla deberías ver:

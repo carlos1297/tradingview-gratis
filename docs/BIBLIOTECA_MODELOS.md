@@ -61,7 +61,7 @@ src/lib/modelos/
 ├── catalogo/                  ⭐ UN DIRECTORIO POR MODELO
 │   ├── index.ts                   array MODELOS_INTEGRADOS
 │   ├── sac/  sac.fuente.ts · sac.README.md · __tests__/
-│   └── ppo/  ppo.fuente.ts · ppo.feed.ts · ppo.README.md · __tests__/
+│   └── ppo/  ppo.fuente.ts · ppo.README.md · __tests__/
 │
 └── registro.ts                catálogo + modelos declarados por entorno
 ```

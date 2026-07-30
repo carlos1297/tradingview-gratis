@@ -115,10 +115,9 @@ src/
     │       │   ├── sac.README.md    Qué motor lo publica y cómo arrancarlo
     │       │   └── __tests__/       sac.integracion.test.ts + su fixture
     │       └── ppo/
-    │           ├── ppo.fuente.ts
-    │           ├── ppo.feed.ts      Envoltorio compatible del cliente WS
-    │           ├── ppo.README.md
-    │           └── __tests__/
+    │           ├── ppo.fuente.ts    Identidad y URL del feed WebSocket de PPO
+    │           ├── ppo.README.md    Qué motor lo publica y cómo arrancarlo
+    │           └── __tests__/       ppo.integracion.test.ts + su fixture
     ├── store/
     │   ├── chart-store.ts           Config del gráfico (persiste)
     │   └── modelos-store.ts         Estado en vivo por modelo (efímero)

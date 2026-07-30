@@ -8,7 +8,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useChartStore } from "@/lib/store/chart-store";
+import { encendido, useChartStore } from "@/lib/store/chart-store";
 import { heatColor, NIVELES_APALANCAMIENTO } from "@/lib/indicators/liquidations";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +56,44 @@ export function HeatmapConfig() {
         </DialogHeader>
 
         <div className="flex flex-col gap-4 p-4">
+          {/* Las dos vistas son independientes: quien solo quiere el perfil
+              lateral apaga los bloques y se queda con el gráfico limpio. */}
+          <Campo
+            titulo="Vistas"
+            ayuda="Los bloques muestran dónde se acumuló la liquidez en el tiempo; el perfil, cuánta hay en cada precio ahora"
+          >
+            <div className="flex flex-col gap-1">
+              <Interruptor
+                etiqueta="Bloques sobre el gráfico"
+                activo={encendido(cfg.mostrarBloques)}
+                onToggle={() => set({ mostrarBloques: !encendido(cfg.mostrarBloques) })}
+              />
+              <Interruptor
+                etiqueta="Perfil lateral (barras a la derecha)"
+                activo={encendido(cfg.mostrarPerfil)}
+                onToggle={() => set({ mostrarPerfil: !encendido(cfg.mostrarPerfil) })}
+              />
+            </div>
+          </Campo>
+
+          {encendido(cfg.mostrarPerfil) && (
+            <Campo
+              titulo="Ancho del perfil"
+              valor={`${Math.round((cfg.anchoPerfilPct ?? 0.12) * 100)}%`}
+              ayuda="Pasá el ratón por una barra para ver su valor"
+            >
+              <input
+                type="range"
+                min={0.05}
+                max={0.35}
+                step={0.01}
+                value={cfg.anchoPerfilPct ?? 0.12}
+                onChange={(e) => set({ anchoPerfilPct: parseFloat(e.target.value) })}
+                className="w-full accent-tv-blue"
+              />
+            </Campo>
+          )}
+
           <Campo titulo="Apalancamiento" ayuda="Cohortes de posiciones incluidas en la estimación">
             <div className="flex flex-wrap gap-1.5">
               {NIVELES_APALANCAMIENTO.map((lev) => {
@@ -145,6 +183,9 @@ export function HeatmapConfig() {
                 lado: "ambos",
                 umbral: 0.05,
                 opacidad: 1,
+                mostrarBloques: true,
+                mostrarPerfil: true,
+                anchoPerfilPct: 0.12,
               })
             }
             className="mt-1 flex items-center gap-1.5 self-start rounded px-2 py-1 text-xs text-tv-text-muted hover:bg-tv-panel-hover hover:text-tv-text"
@@ -155,6 +196,44 @@ export function HeatmapConfig() {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Interruptor de una capa del heatmap (fila completa clicable). */
+function Interruptor({
+  etiqueta,
+  activo,
+  onToggle,
+}: {
+  etiqueta: string;
+  activo: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      role="switch"
+      aria-checked={activo}
+      className="flex items-center justify-between gap-3 rounded px-2 py-1.5 text-left hover:bg-tv-panel-hover"
+    >
+      <span className={cn("text-xs", activo ? "text-tv-text" : "text-tv-text-muted")}>
+        {etiqueta}
+      </span>
+      <span
+        aria-hidden
+        className={cn(
+          "relative h-4 w-7 shrink-0 rounded-full transition-colors",
+          activo ? "bg-tv-blue" : "bg-tv-border",
+        )}
+      >
+        <span
+          className={cn(
+            "absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all",
+            activo ? "left-3.5" : "left-0.5",
+          )}
+        />
+      </span>
+    </button>
   );
 }
 

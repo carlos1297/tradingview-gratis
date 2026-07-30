@@ -32,6 +32,19 @@ export const MINUTOS_POR_TEMPORALIDAD: Record<Timeframe, number> = {
 /** Velas que devuelve una carga base del gráfico (tope de la API de Binance). */
 export const VELAS_POR_CARGA = 1000;
 
+/**
+ * Velas de la PRIMERA pintada del gráfico.
+ *
+ * Las suficientes para llenar la pantalla con velas LEGIBLES; el resto llega
+ * después, en segundo plano. Antes cada ventana esperaba las 1000 antes de
+ * dibujar nada: con el mosaico eso son 1000 × ventana abierta antes de ver la
+ * primera imagen, y encima 1000 velas en ~900 px quedan comprimidas a menos de
+ * un píxel cada una.
+ *
+ * Tiene que ser MENOR que `VELAS_POR_CARGA`, o la completación pediría cero.
+ */
+export const VELAS_PRIMERA_PINTADA = 120;
+
 /** Cuánto tiempo, en ms, abarca una carga completa de esta temporalidad. */
 export function ms_queAbarca(
   temporalidad: Timeframe,

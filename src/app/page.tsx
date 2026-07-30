@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { Minimize } from "lucide-react";
 import { BarraHerramientas } from "@/components/layout/BarraHerramientas";
 import { Header } from "@/components/layout/Header";
@@ -14,10 +14,64 @@ import { StrategyTester } from "@/components/panel/StrategyTester";
 import { useChartStore } from "@/lib/store/chart-store";
 import { salirPantallaCompleta } from "@/lib/fullscreen";
 
+/**
+ * «¿Ya estoy en el cliente?», con la primitiva que React ofrece justo para esto.
+ *
+ * `useSyncExternalStore` toma un snapshot distinto en el servidor y en el
+ * cliente, así que el primer render del cliente coincide con el del servidor y
+ * el segundo ya trae el valor real. Es preferible a un `useState` + `useEffect`:
+ * no es un efecto que dispare un render en cascada (el compilador de React lo
+ * rechaza) y expresa lo que de verdad pasa — el valor lo determina el entorno,
+ * no una escritura de estado.
+ *
+ * El valor nunca cambia después de montar, así que la suscripción es un no-op;
+ * va a nivel de módulo para que su referencia sea estable entre renders.
+ */
+const sinSuscripcion = () => () => {};
+const enCliente = () => true;
+const enServidor = () => false;
+
+/**
+ * Esqueleto del arranque. NO puede leer nada del store: si lo hiciera, volvería
+ * el problema que esta pantalla existe para evitar (ver `HomePage`).
+ *
+ * Reserva la altura de la barra superior para que, al aparecer el contenido, el
+ * layout no salte.
+ */
+function Esqueleto() {
+  return (
+    <div
+      data-label="esqueleto"
+      aria-hidden
+      className="grid h-full w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-tv-bg"
+    >
+      <div className="h-12 border-b border-tv-border bg-tv-panel" />
+      <div />
+    </div>
+  );
+}
+
 export default function HomePage() {
   const watchlistVisible = useChartStore((s) => s.watchlistVisible);
   const soloGraficos = useChartStore((s) => s.soloGraficos);
   const setSoloGraficos = useChartStore((s) => s.setSoloGraficos);
+  /**
+   * El contenido se renderiza SOLO después de montar en el cliente.
+   *
+   * `persist` rehidrata `localStorage` al crear el store, así que el primer
+   * render del cliente ya trae los ajustes del usuario mientras el servidor
+   * renderizó los valores de fábrica: React encontraba dos árboles distintos y
+   * abortaba la hidratación. No era un caso puntual —el símbolo, la plantilla,
+   * los indicadores y sobre todo `watchlistVisible` (que decide si existe la
+   * barra lateral entera) rompían por igual—, así que se corta de raíz: en el
+   * servidor va un esqueleto y el árbol real nace una sola vez, en el cliente,
+   * con el estado correcto.
+   *
+   * Es lo honesto para esta aplicación: es 100 % cliente y se exporta estática
+   * (ver docs/ARQUITECTURA.md). Las velas en canvas y el WebSocket no pueden
+   * renderizarse en el servidor de ninguna manera.
+   */
+  const montado = useSyncExternalStore(sinSuscripcion, enCliente, enServidor);
 
   const salir = () => {
     salirPantallaCompleta();
@@ -42,6 +96,11 @@ export default function HomePage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [soloGraficos]);
+
+  // La salida temprana va acá: después de TODOS los hooks (ponerla antes
+  // rompería el orden de hooks entre renders) y antes de cualquier rama que
+  // dependa del estado persistido.
+  if (!montado) return <Esqueleto />;
 
   // Modo inmersivo: solo los gráficos, en todo el monitor
   if (soloGraficos) {

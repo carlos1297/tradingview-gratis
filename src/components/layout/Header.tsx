@@ -1,20 +1,16 @@
 "use client";
 
-import { Expand, FlaskConical, LayoutGrid, Zap } from "lucide-react";
+import { Expand, FlaskConical, Zap } from "lucide-react";
 import { useChartStore } from "@/lib/store/chart-store";
 import { entrarPantallaCompleta } from "@/lib/fullscreen";
 import { SymbolSelector } from "@/components/chart/SymbolSelector";
 import { IndicatorMenu } from "@/components/chart/IndicatorMenu";
+import { SelectorLayout } from "@/components/chart/SelectorLayout";
 import { ModelSignals } from "@/components/chart/ModelSignals";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-/** Plantillas de cantidad de ventanas (estilo TradingView) */
-const LAYOUTS_PRESET = [1, 2, 3, 4, 6, 8, 10];
-
 export function Header() {
-  const nVentanas = useChartStore((s) => s.ventanasTF.length);
-  const setNumeroVentanas = useChartStore((s) => s.setNumeroVentanas);
   const setSoloGraficos = useChartStore((s) => s.setSoloGraficos);
   const tradesPanelOpen = useChartStore((s) => s.tradesPanelOpen);
   const setTradesPanelOpen = useChartStore((s) => s.setTradesPanelOpen);
@@ -97,26 +93,10 @@ export function Header() {
           <Expand className="h-3.5 w-3.5" />
           <span>Pantalla completa</span>
         </button>
-        {/* plantilla de ventanas (cantidad), estilo TradingView */}
-        <div className="flex items-center gap-0.5 rounded border border-tv-border p-0.5">
-          <LayoutGrid className="mx-0.5 h-3.5 w-3.5 text-tv-text-dim" />
-          {LAYOUTS_PRESET.map((n) => (
-            <button
-              key={n}
-              onClick={() => setNumeroVentanas(n)}
-              title={`${n} ${n === 1 ? "ventana" : "ventanas"}`}
-              aria-label={`${n} ventanas`}
-              className={cn(
-                "min-w-6 rounded px-1.5 py-1 text-xs tabular-nums",
-                nVentanas === n
-                  ? "bg-tv-blue/15 text-tv-blue"
-                  : "text-tv-text-muted hover:bg-tv-panel-hover hover:text-tv-text",
-              )}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
+        {/* Disposición del mosaico. Los botones numéricos no alcanzaban: hay
+            dos disposiciones para la misma cantidad (2 lado a lado vs. 2
+            apiladas), y eso solo se puede elegir viendo la forma. */}
+        <SelectorLayout />
       </div>
     </header>
   );

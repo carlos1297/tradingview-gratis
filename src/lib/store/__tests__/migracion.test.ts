@@ -1,3 +1,4 @@
+import { useChartStore } from "@/lib/store/chart-store";
 import { describe, expect, test } from "bun:test";
 import { MINUTOS_POR_TEMPORALIDAD } from "@/lib/binance/temporalidades";
 
@@ -110,5 +111,94 @@ describe("migración de formatos anteriores", () => {
 
   test("null no rompe", () => {
     expect(migrar(null)).toBeNull();
+  });
+});
+
+/**
+ * v4 → v5: `indicadoresActivos` era una lista de ids con los parámetros
+ * cocinados en el nombre ("ema20"). Si esta traducción falla, el usuario abre el
+ * visor y sus indicadores no están — sin ningún error visible.
+ */
+describe("migración de indicadores a instancias", () => {
+  const LEGADO: Record<string, { definicionId: string; params: Record<string, number | string> }> = {
+    ema20: { definicionId: "ema", params: { periodo: 20, color: "#ffb74d" } },
+    ema50: { definicionId: "ema", params: { periodo: 50, color: "#2962ff" } },
+    ema200: { definicionId: "ema", params: { periodo: 200, color: "#ab47bc" } },
+    rsi: { definicionId: "rsi", params: {} },
+    macd: { definicionId: "macd", params: {} },
+    volumen: { definicionId: "volumen", params: {} },
+  };
+
+  /** El traductor de `migrate`, aislado. */
+  function migrarIndicadores(entradas: unknown): Array<{ definicionId: string; params: Record<string, unknown> }> {
+    if (!Array.isArray(entradas)) return [];
+    return entradas
+      .map((e) => {
+        if (typeof e === "string") {
+          const l = LEGADO[e];
+          return l ? { definicionId: l.definicionId, params: { ...l.params } } : null;
+        }
+        const i = e as { definicionId?: unknown; params?: Record<string, unknown> };
+        if (typeof i?.definicionId !== "string") return null;
+        return { definicionId: i.definicionId, params: { ...(i.params ?? {}) } };
+      })
+      .filter((x): x is { definicionId: string; params: Record<string, unknown> } => x !== null);
+  }
+
+  test("las tres EMAs conservan su período y su color", () => {
+    const r = migrarIndicadores(["ema20", "ema50", "ema200"]);
+    expect(r).toHaveLength(3);
+    expect(r.map((i) => i.params.periodo)).toEqual([20, 50, 200]);
+    expect(r.every((i) => i.definicionId === "ema")).toBe(true);
+    expect(r[0].params.color).toBe("#ffb74d");
+  });
+
+  test("mezcla de válidos y basura: se conservan los válidos", () => {
+    const r = migrarIndicadores(["ema20", "indicador-inventado", "rsi", 42, null]);
+    expect(r.map((i) => i.definicionId)).toEqual(["ema", "rsi"]);
+  });
+
+  test("una lista vacía o ausente no rompe", () => {
+    expect(migrarIndicadores([])).toEqual([]);
+    expect(migrarIndicadores(undefined)).toEqual([]);
+    expect(migrarIndicadores("roto")).toEqual([]);
+  });
+
+  test("un estado que YA es v5 pasa sin tocarse", () => {
+    const r = migrarIndicadores([
+      { definicionId: "ema", params: { periodo: 34, color: "#abcdef" } },
+    ]);
+    expect(r).toEqual([{ definicionId: "ema", params: { periodo: 34, color: "#abcdef" } }]);
+  });
+
+  test("dos EMAs con el mismo período sobreviven las dos", () => {
+    // El modelo de instancias lo permite a propósito: dos EMAs iguales con
+    // colores distintos es un caso legítimo.
+    const r = migrarIndicadores([
+      { definicionId: "ema", params: { periodo: 20, color: "#111111" } },
+      { definicionId: "ema", params: { periodo: 20, color: "#222222" } },
+    ]);
+    expect(r).toHaveLength(2);
+  });
+});
+
+/**
+ * El estado inicial del store se evalúa al cargar el módulo — en el servidor y
+ * en el cliente por separado. Cualquier valor aleatorio ahí adentro sale
+ * distinto en cada lado, y si llega al DOM rompe la hidratación.
+ */
+describe("el estado inicial es determinista", () => {
+  test("la ventana de arranque tiene un id FIJO, no un UUID", () => {
+    // Su id llega al DOM: los `Panel` del mosaico lo usan como atributo `id`
+    // para que la librería de divisores pueda identificarlos.
+    const inicial = useChartStore.getState().ventanasTF[0];
+    expect(inicial.id).toBe("ventana-1");
+    expect(inicial.id).not.toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-/); // no es un UUID
+  });
+
+  test("arranca con una sola ventana en 15m", () => {
+    const v = useChartStore.getState().ventanasTF;
+    expect(v).toHaveLength(1);
+    expect(v[0].timeframe).toBe("15m");
   });
 });

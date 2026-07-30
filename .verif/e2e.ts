@@ -1,8 +1,21 @@
-/** Punta a punta: WS real del motor PPO → adaptador real → panel real. */
-import { adaptarFeedWebSocket } from "@/lib/modelos/adaptadores";
-import { vistaOperacion, saludMotor, posicionParaGrafico } from "@/lib/modelos/derivar";
+/**
+ * Punta a punta: WS real del motor PPO → adaptador real → panel real.
+ *
+ * Necesita un motor escuchando en ws://127.0.0.1:8000/ws. Sin checkpoint:
+ *   cd ~/Escritorio/Entrenamiento-de-IA/RL_PPO && python -m modelo_PPO.demo_feed
+ *
+ * Nota: `.verif/` empieza con punto, así que tsc NO lo type-chequea (los globs
+ * de `include` no matchean directorios ocultos). Si se le cambian los imports,
+ * hay que correrlo para saber si sigue compilando.
+ */
+import {
+  adaptarFeedWebSocket,
+  posicionParaGrafico,
+  saludMotor,
+  vistaOperacion,
+  type EstadoModeloIA,
+} from "@/lib/modelos/nucleo";
 import { fuentePorId } from "@/lib/modelos/registro";
-import type { EstadoModeloIA } from "@/lib/modelos/tipos";
 
 const fuente = { ...fuentePorId("ppo")!, url: "ws://127.0.0.1:8000/ws" };
 console.log(`fuente del registro: id=${fuente.id} transporte=${fuente.transporte}`);

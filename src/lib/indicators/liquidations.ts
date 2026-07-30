@@ -111,6 +111,55 @@ export function computeLiquidationHeatmap(
   return { grid, bins, minPrice, binSize, maxIntensity: maxIntensity || 1 };
 }
 
+/**
+ * Perfil de liquidez: cuánta liquidación pendiente hay en cada precio, en UN
+ * instante. Es el heatmap visto de perfil, para dibujarlo como barras
+ * horizontales sobre el eje de precios.
+ */
+export interface PerfilLiquidez {
+  /** Intensidad por bin de precio (misma escala y bins que la rejilla). */
+  valores: Float32Array;
+  /** Mayor valor de la columna: normaliza el largo de las barras. */
+  max: number;
+  /** Columna (vela) de la que se leyó. */
+  columna: number;
+}
+
+/**
+ * Perfil de UNA columna de la rejilla.
+ *
+ * Lee una sola columna a propósito, y no la suma de las visibles: `grid[i]` ya
+ * contiene los niveles que siguen VIVOS en la vela `i` —el cálculo pone a cero
+ * los que el precio atravesó—, así que sumar contaría cincuenta veces un nivel
+ * que sobrevivió cincuenta velas. El perfil hablaría entonces de cuánto duraron
+ * los niveles, no de cuánta liquidez queda pendiente, que es lo que se quiere
+ * leer.
+ *
+ * Devuelve `null` si la columna está fuera de rango o si no hay nada que
+ * dibujar (columna entera en cero): así quien dibuja no tiene que defenderse de
+ * una división por cero.
+ */
+export function perfilLiquidez(
+  heatmap: LiquidationHeatmap,
+  columna: number,
+): PerfilLiquidez | null {
+  const { grid, bins } = heatmap;
+  if (bins <= 0) return null;
+  const columnas = Math.floor(grid.length / bins);
+  const col = Math.floor(columna);
+  if (!Number.isFinite(col) || col < 0 || col >= columnas) return null;
+
+  // Copia (240 flotantes): `subarray` compartiría memoria con la rejilla y
+  // cualquier recálculo posterior mutaría el perfil que se está dibujando.
+  const valores = grid.slice(col * bins, (col + 1) * bins);
+  let max = 0;
+  for (let b = 0; b < valores.length; b++) {
+    if (valores[b] > max) max = valores[b];
+  }
+  if (max <= 0) return null;
+  return { valores, max, columna: col };
+}
+
 // Dark blue → cyan → green → yellow ramp (Coinglass-like), alpha grows with
 // intensity so weak levels barely tint the chart.
 const STOPS: Array<[number, [number, number, number]]> = [

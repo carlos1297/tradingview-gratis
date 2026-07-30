@@ -97,7 +97,14 @@ export function macd(
   slow = 26,
   signal = 9,
 ): MACDPoint[] {
-  if (candles.length < slow + signal) return [];
+  // La línea MACD arranca en el índice `slow − 1` (donde ya hay EMA lenta), así
+  // que su largo es `n − slow + 1`. Para que la EMA de la señal tenga su primer
+  // valor hacen falta `signal` puntos de esa línea:
+  //
+  //     n − slow + 1 ≥ signal   ⟺   n ≥ slow + signal − 1
+  //
+  // Con `< slow + signal` se descartaba justo el primer caso válido.
+  if (candles.length < slow + signal - 1) return [];
   const emaFast = ema(candles, fast);
   const emaSlow = ema(candles, slow);
   // align: emaSlow starts later

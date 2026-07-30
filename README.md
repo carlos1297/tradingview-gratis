@@ -106,7 +106,7 @@ paso a paso completo está en [docs/INTEGRAR_MODELO.md](docs/INTEGRAR_MODELO.md)
 
 ```bash
 bun run verificar   # tsc --noEmit && eslint && bun test src
-bun test src        # 86 tests del contrato multi-modelo
+bun test src        # 223 tests del contrato multi-modelo
 ```
 
 ## 🧠 Cómo funciona

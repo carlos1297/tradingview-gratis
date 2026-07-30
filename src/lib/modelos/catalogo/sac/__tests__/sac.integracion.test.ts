@@ -1,8 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { adaptarContratoEstandar } from "../../../nucleo/adaptadores";
-import { posicionParaGrafico, saludMotor, vistaOperacion } from "../../../nucleo/derivar";
+import {
+  adaptarContratoEstandar,
+  buildOperaciones,
+  posicionParaGrafico,
+  saludMotor,
+  vistaOperacion,
+} from "@/lib/modelos/nucleo";
 import { fuentePorId } from "../../../registro";
-import { buildOperaciones } from "@/lib/trades";
 import crudo from "./fixtures/estado_sac_v1.json";
 
 /**

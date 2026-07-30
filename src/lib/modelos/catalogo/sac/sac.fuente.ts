@@ -1,5 +1,4 @@
-import { adaptarContratoEstandar } from "../../nucleo/adaptadores";
-import type { FuenteModelo } from "../../nucleo/tipos";
+import { adaptarContratoEstandar, type FuenteModelo } from "@/lib/modelos/nucleo";
 
 /**
  * sac.fuente.ts — Alta del modelo SAC en el visor.
